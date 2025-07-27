@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    
+    <!-- Basic Meta Tags -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="description" content="CartPilot - Smart grocery navigation app with allergen-safe routing, barcode scanning, and efficient shopping lists" />
+    <meta name="keywords" content="grocery shopping, navigation, allergen-safe, barcode scanner, shopping list, PWA" />
+    <meta name="author" content="CartPilot" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="CartPilot" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="CartPilot" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="msapplication-TileColor" content="#3b82f6" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="color-scheme" content="light" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://cartpilot-beta.netlify.app/" />
+    <meta property="og:title" content="CartPilot - Smart Grocery Navigation" />
+    <meta property="og:description" content="Navigate grocery stores efficiently with allergen-safe routing and smart shopping lists" />
+    <meta property="og:image" content="/android-chrome-512x512.png" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://cartpilot-beta.netlify.app/" />
+    <meta property="twitter:title" content="CartPilot - Smart Grocery Navigation" />
+    <meta property="twitter:description" content="Navigate grocery stores efficiently with allergen-safe routing and smart shopping lists" />
+    <meta property="twitter:image" content="/android-chrome-512x512.png" />
+    
+    <!-- Favicons and Icons (matching your actual files) -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    
+    <!-- Android Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    
+    <!-- Performance Hints -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+    
+    <title>CartPilot - Smart Grocery Navigation</title>
+    
+    <!-- Critical CSS for initial page load -->
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #f9fafb;
+      }
+      
+      .loading-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #f9fafb;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e5e7eb;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      #root:not(:empty) + .loading-container {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    
+    <!-- Loading fallback shown while React loads -->
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+    </div>
+    
+    <!-- PWA Install Prompt Script -->
+    <script>
+      // PWA install prompt handling
+      let deferredPrompt;
+      
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Show custom install banner
+        const installBanner = document.createElement('div');
+        installBanner.innerHTML = `
+          <div style="position: fixed; bottom: 20px; left: 20px; right: 20px; background: #3b82f6; color: white; padding: 16px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>🛒 Install CartPilot</strong>
+                <div style="font-size: 14px; opacity: 0.9;">Get quick access from your home screen</div>
+              </div>
+              <div>
+                <button id="install-btn" style="background: white; color: #3b82f6; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-right: 8px;">Install</button>
+                <button id="dismiss-btn" style="background: transparent; color: white; border: 1px solid white; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Later</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(installBanner);
+        
+        // Handle install button click
+        document.getElementById('install-btn').addEventListener('click', () => {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('User accepted the install prompt');
+            }
+            deferredPrompt = null;
+            document.body.removeChild(installBanner);
+          });
+        });
+        
+        // Handle dismiss button click
+        document.getElementById('dismiss-btn').addEventListener('click', () => {
+          document.body.removeChild(installBanner);
+        });
+      });
+      
+      // Track app installation
+      window.addEventListener('appinstalled', () => {
+        console.log('CartPilot was installed');
+      });
+    </script>
+    
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
