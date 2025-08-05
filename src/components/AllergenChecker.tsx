@@ -12,7 +12,21 @@ interface AllergenCheckerProps {
 export const AllergenChecker: React.FC<AllergenCheckerProps> = ({ userId }) => {
   const [barcode, setBarcode] = useState('')
   const [isChecking, setIsChecking] = useState(false)
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<{
+    product: {
+      name: string
+      brand: string
+      category: string
+    }
+    warningLevel: string
+    safeForUser: boolean
+    detectedAllergens?: string[]
+    alternatives?: Array<{
+      id: string
+      name: string
+      brand: string
+    }>
+  } | null>(null)
   const [userAllergens, setUserAllergens] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
@@ -227,7 +241,7 @@ export const AllergenChecker: React.FC<AllergenCheckerProps> = ({ userId }) => {
                 <div className="space-y-2">
                   <h4 className="font-semibold text-green-600">✅ Safe alternatives:</h4>
                   <div className="space-y-2">
-                    {result.alternatives.map((alt: any) => (
+                    {result.alternatives.map((alt) => (
                       <div key={alt.id} className="p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="font-medium">{alt.name}</div>
                         <div className="text-sm text-gray-600">{alt.brand}</div>

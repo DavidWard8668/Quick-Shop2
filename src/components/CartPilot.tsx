@@ -10,6 +10,7 @@ import { AuthModal } from "./AuthModal";
 import { ShoppingRouteBuilder } from "./ShoppingRouteBuilder";
 import { SmartSuggestions } from "./SmartSuggestions";
 import { getCurrentUser, signOut, testSupabaseConnection, supabase } from "../supabaseClient";
+import { User } from '@supabase/supabase-js';
 import {
   getUserProfile,
   createUserProfile,
@@ -23,6 +24,12 @@ import { openMapsNavigation } from '../services/navigationService'
 import { awardPoints, getUserStats } from '../services/gamificationService'
 
 // Using StoreData type from storeDataService instead of duplicate interface
+
+// PWA install prompt event type
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
 
 interface UserProfile {
   id: string
@@ -39,32 +46,53 @@ interface UserProfile {
 export const CartPilot: React.FC = () => {
   // Core state
   const [activeTab, setActiveTab] = useState<'stores' | 'navigate' | 'cart' | 'pilot'>('stores')
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [userStats, setUserStats] = useState<any>(null)
+  const [userStats, setUserStats] = useState<{
+    points: number
+    contributions: number
+    rank: number
+    nextLevelPoints: number
+    level: number
+    accuracy: number
+    totalShopping: number
+    membershipLevel?: string
+  } | null>(null)
   
   // Store state
   const [stores, setStores] = useState<StoreData[]>([])
-  const [favoriteStores, setFavoriteStores] = useState<any[]>([])
+  const [favoriteStores, setFavoriteStores] = useState<{store_id: string, store?: StoreData}[]>([])
   const [selectedStore, setSelectedStore] = useState<StoreData | null>(null)
   const [isSearching, setIsSearching] = useState(false)
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null)
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searchResults, setSearchResults] = useState<{
+    id: string
+    name: string
+    location: { aisle: string, section: string }
+    price: number
+    verified: boolean
+    verificationCount: number
+  }[]>([])
   const [postcodeSearch, setPostcodeSearch] = useState('')
   
   // Auth state
   const [showAuthModal, setShowAuthModal] = useState(false)
   
   // Shopping cart state
-  const [cartItems, setCartItems] = useState<any[]>([])
-  const [selectedItems, setSelectedItems] = useState<any[]>([])
+  const [cartItems, setCartItems] = useState<{
+    id: string
+    name: string
+    completed: boolean
+    addedAt: string
+  }[]>([])
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [itemInput, setItemInput] = useState('')
   
   // PWA install state
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(true)
 
   // Calculate distance between two coordinates
@@ -154,7 +182,7 @@ export const CartPilot: React.FC = () => {
       
       // Calculate distances and filter to only truly nearby stores
       const storesWithDistance = foundStores
-        .map((store: any) => {
+        .map((store: StoreData) => {
           const storeLat = parseFloat(store.lat)
           const storeLng = parseFloat(store.lng)
           
@@ -465,7 +493,7 @@ export const CartPilot: React.FC = () => {
     initializeApp()
     
     // Listen for PWA install prompt
-    const handleBeforeInstallPrompt = (e: any) => {
+    const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
       e.preventDefault()
       setDeferredPrompt(e)
     }

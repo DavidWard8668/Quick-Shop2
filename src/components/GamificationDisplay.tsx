@@ -1,9 +1,26 @@
 import React, { useState, useEffect } from 'react'
 
+interface UserStats {
+  points: number
+  contributions: number
+  rank: number
+  nextLevelPoints: number
+  level: number
+  accuracy: number
+  totalShopping: number
+  membershipLevel?: string
+}
+
+interface UserProfile {
+  nickname?: string
+  preferred_name?: string
+  level?: string
+}
+
 interface GamificationDisplayProps {
-  userStats: any
-  userProfile: any
-  onStatsUpdate: (stats: any) => void
+  userStats: UserStats | null
+  userProfile: UserProfile | null
+  onStatsUpdate: (stats: UserStats) => void
   userId: string
 }
 
@@ -29,8 +46,19 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
   onStatsUpdate,
   userId
 }) => {
-  const [leaderboard, setLeaderboard] = useState<any[]>(MOCK_LEADERBOARD)
-  const [pointHistory, setPointHistory] = useState<any[]>(MOCK_POINT_HISTORY)
+  const [leaderboard, setLeaderboard] = useState<Array<{
+    user_id: string
+    nickname: string
+    points: number
+    contributions: number
+    rank: number
+  }>>(MOCK_LEADERBOARD)
+  const [pointHistory, setPointHistory] = useState<Array<{
+    id: string
+    action: string
+    points: number
+    timestamp: string
+  }>>(MOCK_POINT_HISTORY)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   // Fallback stats if userStats is not provided

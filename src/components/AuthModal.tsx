@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { User } from '@supabase/supabase-js'
 
 interface AuthModalProps {
   onClose: () => void
-  onSuccess: (user: any) => void
+  onSuccess: (user: User) => void
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
@@ -30,7 +31,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           onSuccess(data.user)
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Auth error:', error)
       alert(error.message || 'Authentication failed')
     } finally {

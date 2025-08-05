@@ -205,7 +205,7 @@ export const createShoppingList = async (userId: string, name: string, targetSto
 // Get shopping list items with product details and locations
 export const getShoppingListItems = async (listId: string, storeId?: string): Promise<ShoppingListItem[]> => {
   try {
-    let query = supabase
+    const query = supabase
       .from('shopping_list_items')
       .select(`
         *,

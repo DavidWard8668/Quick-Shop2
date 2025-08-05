@@ -148,7 +148,7 @@ describe('navigationService', () => {
     it('returns false when geolocation is not available', () => {
       // Temporarily mock navigator without geolocation
       const originalNavigator = global.navigator
-      // @ts-ignore
+      // @ts-expect-error - need to delete navigator for testing
       delete global.navigator
       global.navigator = {} as Navigator
       
