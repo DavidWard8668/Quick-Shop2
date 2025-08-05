@@ -82,8 +82,33 @@ export const fetchNearbyStoresFromDB = async (lat: number, lng: number, radiusMi
       })
     }
 
-    // Calculate distances and sort
+    // Filter for supermarkets and express stores only
+    const ALLOWED_CHAINS = [
+      'Tesco', 'Tesco Express', 'Tesco Metro', 'Tesco Extra',
+      'Sainsbury\'s', 'Sainsbury\'s Local',
+      'ASDA', 'ASDA Superstore', 'ASDA Supermarket',
+      'Morrisons', 'Morrisons Daily',
+      'Aldi', 'Lidl',
+      'Co-op', 'Co-operative', 'The Co-operative Food',
+      'Iceland', 'Iceland Foods',
+      'Marks & Spencer', 'M&S Food', 'M&S Simply Food',
+      'Waitrose', 'Waitrose & Partners', 'Little Waitrose',
+      'Spar', 'Premier', 'Nisa', 'Londis', 'Budgens',
+      'Whole Foods Market', 'Farm Foods'
+    ]
+
+    // Calculate distances and sort, filtering for major chains only
     const storesWithDistance = (data || [])
+      .filter(store => {
+        // Filter by store chain/name
+        const storeName = store.name || ''
+        const storeChain = store.chain || ''
+        
+        return ALLOWED_CHAINS.some(allowedChain => 
+          storeName.toLowerCase().includes(allowedChain.toLowerCase()) ||
+          storeChain.toLowerCase().includes(allowedChain.toLowerCase())
+        )
+      })
       .map(store => ({
         ...store,
         distance: calculateDistance(lat, lng, parseFloat(store.lat), parseFloat(store.lng))

@@ -530,7 +530,9 @@ export const CartPilot: React.FC = () => {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <span className="text-white font-medium">Welcome, Navigator</span>
+                <span className="text-white font-medium">
+                  Welcome, {userProfile?.preferred_name || userProfile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Navigator'}
+                </span>
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -693,8 +695,15 @@ export const CartPilot: React.FC = () => {
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <h3 className="text-xl font-bold text-gray-800">{store.name}</h3>
-                              <Badge className="bg-blue-100 text-blue-800 border-blue-200">{store.chain}</Badge>
+                              <h3 className="text-xl font-bold text-gray-800">
+                                {store.name && store.chain && store.name !== store.chain 
+                                  ? `${store.name} (${store.chain})`
+                                  : store.name || store.chain || 'Store'
+                                }
+                              </h3>
+                              {store.chain && store.name !== store.chain && (
+                                <Badge className="bg-blue-100 text-blue-800 border-blue-200">{store.chain}</Badge>
+                              )}
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -939,6 +948,8 @@ export const CartPilot: React.FC = () => {
                     <GamificationDisplay 
                       userId={user.id} 
                       userStats={userStats}
+                      userProfile={userProfile}
+                      onStatsUpdate={(stats) => setUserStats(stats)}
                     />
                   </CardContent>
                 </Card>
