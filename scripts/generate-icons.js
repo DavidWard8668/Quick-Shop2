@@ -65,9 +65,16 @@ async function generateIcons() {
   console.log('');
 
   try {
-    // Generate main PWA icons
-    console.log('🚀 Generating main PWA icons...');
+    // Generate main PWA icons with circular mask
+    console.log('🚀 Generating main PWA icons with circular mask...');
     for (const icon of iconSizes) {
+      // Create circular mask
+      const circularMask = Buffer.from(
+        `<svg width="${icon.size}" height="${icon.size}">
+          <circle cx="${icon.size/2}" cy="${icon.size/2}" r="${icon.size/2}" fill="white"/>
+        </svg>`
+      );
+
       await sharp(sourceImage)
         .resize(icon.size, icon.size, {
           kernel: sharp.kernel.lanczos3,
@@ -75,27 +82,36 @@ async function generateIcons() {
           position: 'center',
           background: { r: 255, g: 255, b: 255, alpha: 0 }
         })
+        .composite([{ input: circularMask, blend: 'dest-in' }])
         .png({ quality: 100 })
         .toFile(path.join(outputDir, icon.name));
       
-      console.log(`✅ Generated ${icon.name}`);
+      console.log(`✅ Generated circular ${icon.name}`);
     }
 
     console.log('');
-    console.log('🍎 Generating Apple Touch Icons...');
+    console.log('🍎 Generating Apple Touch Icons with circular mask...');
 
-    // Generate Apple Touch Icons
+    // Generate Apple Touch Icons with circular mask
     for (const icon of additionalSizes) {
+      // Create circular mask
+      const circularMask = Buffer.from(
+        `<svg width="${icon.size}" height="${icon.size}">
+          <circle cx="${icon.size/2}" cy="${icon.size/2}" r="${icon.size/2}" fill="white"/>
+        </svg>`
+      );
+
       await sharp(sourceImage)
         .resize(icon.size, icon.size, {
           kernel: sharp.kernel.lanczos3,
           fit: 'cover',
           position: 'center'
         })
+        .composite([{ input: circularMask, blend: 'dest-in' }])
         .png({ quality: 100 })
         .toFile(path.join(outputDir, icon.name));
       
-      console.log(`✅ Generated ${icon.name}`);
+      console.log(`✅ Generated circular ${icon.name}`);
     }
 
     console.log('');
