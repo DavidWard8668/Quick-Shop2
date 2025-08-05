@@ -168,6 +168,7 @@ export const fetchAndSaveStoresFromOSM = async (lat: number, lng: number): Promi
         }
       })
       .filter((store: StoreData | null): store is StoreData => store !== null)
+      .filter((store: StoreData) => store.chain !== 'Independent') // Exclude independent shops
       .filter((store: StoreData) => store.distance <= 15) // Within 15 miles
       .sort((a: StoreData, b: StoreData) => a.distance - b.distance)
       .slice(0, 30) // Limit to 30 stores
@@ -333,10 +334,9 @@ export const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2
 }
 
 const cleanStoreName = (name: string): string => {
-  // Remove common store suffixes and clean up
+  // Only remove common store suffixes, keep the brand name in the title for better recognition
   return name
     .replace(/\s+(Supermarket|Store|Extra|Express|Local|Metro|Superstore)$/i, '')
-    .replace(/^(Tesco|ASDA|Sainsbury's|Morrisons|Aldi|Lidl|Co-op|Waitrose|Iceland|M&S)\s*/i, '')
     .trim()
 }
 

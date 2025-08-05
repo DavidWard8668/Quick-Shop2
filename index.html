@@ -122,56 +122,6 @@
       <div class="loading-spinner"></div>
     </div>
     
-    <!-- PWA Install Prompt Script -->
-    <script>
-      // PWA install prompt handling
-      let deferredPrompt;
-      
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        
-        // Show custom install banner
-        const installBanner = document.createElement('div');
-        installBanner.innerHTML = `
-          <div style="position: fixed; bottom: 20px; left: 20px; right: 20px; background: #3b82f6; color: white; padding: 16px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <strong>🛒 Install CartPilot</strong>
-                <div style="font-size: 14px; opacity: 0.9;">Get quick access from your home screen</div>
-              </div>
-              <div>
-                <button id="install-btn" style="background: white; color: #3b82f6; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-right: 8px;">Install</button>
-                <button id="dismiss-btn" style="background: transparent; color: white; border: 1px solid white; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Later</button>
-              </div>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(installBanner);
-        
-        // Handle install button click
-        document.getElementById('install-btn').addEventListener('click', () => {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-              console.log('User accepted the install prompt');
-            }
-            deferredPrompt = null;
-            document.body.removeChild(installBanner);
-          });
-        });
-        
-        // Handle dismiss button click
-        document.getElementById('dismiss-btn').addEventListener('click', () => {
-          document.body.removeChild(installBanner);
-        });
-      });
-      
-      // Track app installation
-      window.addEventListener('appinstalled', () => {
-        console.log('CartPilot was installed');
-      });
-    </script>
     
     <script type="module" src="/src/main.tsx"></script>
   </body>
