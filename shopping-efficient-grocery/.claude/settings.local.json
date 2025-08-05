@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npx vercel:*)",
-      "Bash(npx cap:*)"
+      "Bash(npx cap:*)",
+      "WebFetch(domain:vercel.com)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }
