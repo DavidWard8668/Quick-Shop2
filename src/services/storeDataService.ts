@@ -82,19 +82,17 @@ export const fetchNearbyStoresFromDB = async (lat: number, lng: number, radiusMi
       })
     }
 
-    // Filter for supermarkets and express stores only
+    // Filter for major supermarket chains only (no independent/small chains)
     const ALLOWED_CHAINS = [
       'Tesco', 'Tesco Express', 'Tesco Metro', 'Tesco Extra',
       'Sainsbury\'s', 'Sainsbury\'s Local',
       'ASDA', 'ASDA Superstore', 'ASDA Supermarket',
       'Morrisons', 'Morrisons Daily',
       'Aldi', 'Lidl',
-      'Co-op', 'Co-operative', 'The Co-operative Food',
       'Iceland', 'Iceland Foods',
       'Marks & Spencer', 'M&S Food', 'M&S Simply Food',
       'Waitrose', 'Waitrose & Partners', 'Little Waitrose',
-      'Spar', 'Premier', 'Nisa', 'Londis', 'Budgens',
-      'Whole Foods Market', 'Farm Foods'
+      'Whole Foods Market'
     ]
 
     // Calculate distances and sort, filtering for major chains only

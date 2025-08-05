@@ -100,6 +100,9 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
   }
 
 
+  console.log('GamificationDisplay rendering with stats:', stats)
+  console.log('GamificationDisplay rendering with profile:', profile)
+  
   return (
     <div className="space-y-6">
       {/* User Stats Card */}

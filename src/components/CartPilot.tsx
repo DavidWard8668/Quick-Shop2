@@ -7,6 +7,7 @@ import { ProductSearch } from './ProductSearch'
 import { AllergenChecker } from "./AllergenChecker";
 import { GamificationDisplay } from "./GamificationDisplay";
 import { AuthModal } from "./AuthModal";
+import { ChangePasswordModal } from "./ChangePasswordModal";
 import { ShoppingRouteBuilder } from "./ShoppingRouteBuilder";
 import { SmartSuggestions } from "./SmartSuggestions";
 import { getCurrentUser, signOut, testSupabaseConnection, supabase } from "../supabaseClient";
@@ -80,6 +81,7 @@ export const CartPilot: React.FC = () => {
   
   // Auth state
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
   
   // Shopping cart state
   const [cartItems, setCartItems] = useState<{
@@ -561,14 +563,24 @@ export const CartPilot: React.FC = () => {
                 <span className="text-white font-medium">
                   Welcome, {userProfile?.preferred_name || userProfile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Navigator'}
                 </span>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleSignOut}
-                  className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600"
-                >
-                  Sign Out
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowChangePasswordModal(true)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600"
+                  >
+                    Change Password
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleSignOut}
+                    className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600"
+                  >
+                    Sign Out
+                  </Button>
+                </div>
               </>
             ) : (
               <Button 
@@ -724,10 +736,7 @@ export const CartPilot: React.FC = () => {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="text-xl font-bold text-gray-800">
-                                {store.name && store.chain && store.name !== store.chain 
-                                  ? `${store.name} (${store.chain})`
-                                  : store.name || store.chain || 'Store'
-                                }
+                                {store.name || store.chain || 'Store'}
                               </h3>
                               {store.chain && store.name !== store.chain && (
                                 <Badge className="bg-blue-100 text-blue-800 border-blue-200">{store.chain}</Badge>
@@ -1010,23 +1019,25 @@ export const CartPilot: React.FC = () => {
         )}
         
         
-        {/* PWA Install Banner */}
+        {/* PWA Install Banner - Footer Only */}
         {showInstallBanner && (
-          <div className="mt-12 mb-6">
+          <div className="mt-8 mb-4">
             <Card className="bg-blue-600/90 backdrop-blur-sm shadow-xl rounded-2xl text-white">
-              <CardContent className="p-6 text-center">
-                <h3 className="text-xl font-bold mb-2">📱 Install CartPilot</h3>
-                <p className="text-blue-100 mb-4">Get quick access from your home screen</p>
-                <div className="flex gap-3 justify-center">
+              <CardContent className="p-4 text-center">
+                <h3 className="text-lg font-bold mb-2">📱 Install CartPilot</h3>
+                <p className="text-blue-100 text-sm mb-3">Get quick access from your home screen</p>
+                <div className="flex gap-2 justify-center">
                   <Button 
                     onClick={handlePWAInstall}
-                    className="bg-white text-blue-600 hover:bg-gray-100 px-6 py-2 font-semibold rounded-lg"
+                    size="sm"
+                    className="bg-white text-blue-600 hover:bg-gray-100 px-4 py-2 font-semibold rounded-lg"
                   >
                     Install
                   </Button>
                   <Button 
                     onClick={handleInstallLater}
-                    className="bg-white/20 hover:bg-white/30 text-white border border-white/30 px-6 py-2 font-semibold rounded-lg"
+                    size="sm"
+                    className="bg-white/20 hover:bg-white/30 text-white border border-white/30 px-4 py-2 font-semibold rounded-lg"
                   >
                     Later
                   </Button>
@@ -1045,6 +1056,16 @@ export const CartPilot: React.FC = () => {
             setUser(user)
             setShowAuthModal(false)
             loadUserData()
+          }}
+        />
+      )}
+      
+      {/* Change Password Modal */}
+      {showChangePasswordModal && (
+        <ChangePasswordModal 
+          onClose={() => setShowChangePasswordModal(false)}
+          onSuccess={() => {
+            alert('Password changed successfully!')
           }}
         />
       )}

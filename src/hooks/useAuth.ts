@@ -192,6 +192,44 @@ export const useAuth = () => {
     }
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      setAuthLoading(true);
+      console.log('Changing password...');
+
+      // First verify the current password
+      if (!user?.email) {
+        throw new Error('No user email found');
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        throw new Error('Current password is incorrect');
+      }
+
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      console.log('Password changed successfully');
+      return { data: true, error: null };
+    } catch (error: any) {
+      console.error('Change password failed:', error);
+      return { data: null, error };
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   // Premium access logic
   const hasPremiumAccess = userProfile?.subscription_status === 'premium' || 
                           userProfile?.subscription_status === 'premium_earned';
@@ -208,6 +246,7 @@ export const useAuth = () => {
     signIn,
     signUp,
     signOut,
+    changePassword,
     hasPremiumAccess,
     premiumDaysRemaining,
     createUserProfile,

@@ -1,5 +1,5 @@
 // src/components/UserProfile.tsx - Fixed Authentication Check
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -17,9 +17,11 @@ import {
   Map,
   Target,
   Database,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface UserProfileProps {
   onClose?: () => void;
@@ -28,6 +30,7 @@ interface UserProfileProps {
 
 const UserProfile: React.FC<UserProfileProps> = ({ onClose, testMode = false }) => {
   const { user, userProfile, signOut, hasPremiumAccess, premiumDaysRemaining } = useAuth();
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   // Test Database Handler
   const handleTestDatabase = async () => {
@@ -323,6 +326,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ onClose, testMode = false }) 
       {/* Action Buttons */}
       <div className="space-y-2">
         <Button 
+          onClick={() => setShowChangePassword(true)}
+          variant="outline"
+          className="w-full justify-start border-green-500 text-green-600 hover:bg-green-50"
+        >
+          <Lock className="h-4 w-4 mr-2" />
+          Change Password
+        </Button>
+        
+        <Button 
           onClick={handleTestDatabase}
           variant="outline"
           className="w-full justify-start border-blue-500 text-blue-600 hover:bg-blue-50"
@@ -340,6 +352,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ onClose, testMode = false }) 
           Sign Out Navigator
         </Button>
       </div>
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <ChangePasswordModal 
+          onClose={() => setShowChangePassword(false)}
+          onSuccess={() => {
+            console.log('Password changed successfully');
+            // Could show a toast notification here
+          }}
+        />
+      )}
 
       {/* Navigator Since */}
       <div className="text-center text-sm text-gray-500 pb-2">
