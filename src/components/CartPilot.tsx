@@ -518,37 +518,11 @@ export const CartPilot: React.FC = () => {
           {/* Logo Section */}
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-gradient-to-r from-green-400 via-orange-400 to-green-500 flex items-center justify-center shadow-lg relative overflow-hidden">
-              {/* Custom CartPilot Icon */}
-              <svg viewBox="0 0 100 100" className="w-10 h-10 text-white">
-                {/* Shopping Cart */}
-                <path 
-                  d="M20 25 L35 25 L40 60 L70 60 L75 40 L30 40" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="3" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                />
-                {/* Cart Grid */}
-                <line x1="40" y1="35" x2="70" y2="35" stroke="currentColor" strokeWidth="2"/>
-                <line x1="40" y1="45" x2="70" y2="45" stroke="currentColor" strokeWidth="2"/>
-                <line x1="40" y1="55" x2="70" y2="55" stroke="currentColor" strokeWidth="2"/>
-                <line x1="50" y1="30" x2="50" y2="60" stroke="currentColor" strokeWidth="2"/>
-                <line x1="60" y1="30" x2="60" y2="60" stroke="currentColor" strokeWidth="2"/>
-                {/* Wheels */}
-                <circle cx="45" cy="75" r="4" fill="currentColor"/>
-                <circle cx="65" cy="75" r="4" fill="currentColor"/>
-                {/* Navigation Arrow */}
-                <path 
-                  d="M75 15 L85 25 L75 35 M85 25 L60 25" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="3" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                  opacity="0.8"
-                />
-              </svg>
+              <img 
+                src="/favicon.ico" 
+                alt="CartPilot Logo" 
+                className="w-12 h-12 object-contain"
+              />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">CARTPILOT</h1>
