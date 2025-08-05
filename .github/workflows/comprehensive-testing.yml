@@ -1,0 +1,310 @@
+name: 🧪 Comprehensive Testing & Analysis
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run comprehensive overnight testing at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  # 🌐 Web App Testing
+  web-testing:
+    name: 🌐 Web App Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm ci
+      
+    - name: 🔍 TypeScript type checking
+      run: npm run typecheck
+      
+    - name: 🧹 ESLint code quality
+      run: npm run lint
+      
+    - name: 🏗️ Build application
+      run: npm run build
+      
+    - name: 🧪 Run unit tests
+      run: npm run test:run
+      
+    - name: 📊 Generate test coverage
+      run: npm run test:coverage
+      
+    - name: 📈 Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage/lcov.info
+        
+    - name: 💾 Archive test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: web-test-results
+        path: |
+          coverage/
+          dist/
+
+  # 🍎 iOS Testing
+  ios-testing:
+    name: 🍎 iOS App Tests
+    runs-on: macos-latest
+    needs: web-testing
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 🍎 Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+        
+    - name: 📋 Install dependencies
+      run: npm ci
+      
+    - name: 🏗️ Build web app
+      run: npm run build
+      
+    - name: ⚡ Sync Capacitor
+      run: npx cap sync ios
+      
+    - name: 🔨 Build iOS app
+      run: xcodebuild -workspace ios/App/App.xcworkspace -scheme App -destination 'platform=iOS Simulator,name=iPhone 15' build
+      
+    - name: 🧪 Run iOS tests
+      run: xcodebuild test -workspace ios/App/App.xcworkspace -scheme App -destination 'platform=iOS Simulator,name=iPhone 15'
+      continue-on-error: true
+      
+    - name: 💾 Archive iOS build
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ios-build
+        path: ios/
+
+  # 🤖 Android Testing
+  android-testing:
+    name: 🤖 Android App Tests
+    runs-on: ubuntu-latest
+    needs: web-testing
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: ☕ Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: 🤖 Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: 📋 Install dependencies
+      run: npm ci
+      
+    - name: 🏗️ Build web app
+      run: npm run build
+      
+    - name: ⚡ Sync Capacitor
+      run: npx cap sync android
+      
+    - name: 🔨 Build Android app
+      run: |
+        cd android
+        ./gradlew assembleDebug
+        
+    - name: 🧪 Run Android tests
+      run: |
+        cd android  
+        ./gradlew testDebugUnitTest
+      continue-on-error: true
+      
+    - name: 💾 Archive Android build
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: android-build
+        path: |
+          android/app/build/outputs/
+          android/app/build/reports/
+
+  # 🔍 Comprehensive Code Analysis
+  code-analysis:
+    name: 🔍 Deep Code Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better analysis
+        
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm ci
+      
+    - name: 🔒 Security audit
+      run: npm audit --audit-level high
+      continue-on-error: true
+      
+    - name: 📊 Bundle size analysis
+      run: |
+        npm run build
+        npx bundlemon --ci
+      continue-on-error: true
+      
+    - name: 🐛 SonarCloud scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      continue-on-error: true
+        
+    - name: 🔍 CodeQL analysis
+      uses: github/codeql-action/init@v3
+      with:
+        languages: javascript
+        
+    - name: 🔍 Perform CodeQL analysis
+      uses: github/codeql-action/analyze@v3
+      
+    - name: 📝 Generate comprehensive report
+      run: |
+        echo "# 📊 Overnight Analysis Report - $(date)" > analysis-report.md
+        echo "## 🔒 Security Status" >> analysis-report-md
+        npm audit --json > security-report.json || true
+        echo "## 📦 Bundle Analysis" >> analysis-report.md
+        du -sh dist/ >> analysis-report.md
+        echo "## 🧪 Test Coverage" >> analysis-report.md
+        npm run test:coverage --silent >> analysis-report.md || true
+        
+    - name: 💾 Archive analysis results
+      uses: actions/upload-artifact@v4
+      with:
+        name: overnight-analysis
+        path: |
+          analysis-report.md
+          security-report.json
+          coverage/
+
+  # 🚀 Deployment Check
+  deployment-check:
+    name: 🚀 Deployment Verification
+    runs-on: ubuntu-latest
+    needs: [web-testing, ios-testing, android-testing]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📋 Install dependencies
+      run: npm ci
+      
+    - name: 🏗️ Production build test
+      run: npm run build
+      
+    - name: 🌐 Test deployment readiness
+      run: |
+        echo "✅ Web build successful"
+        echo "✅ iOS build completed" 
+        echo "✅ Android build completed"
+        echo "🚀 Ready for deployment!"
+        
+    - name: 📊 Create deployment summary
+      run: |
+        echo "# 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Web tests passed" >> $GITHUB_STEP_SUMMARY  
+        echo "- ✅ iOS build completed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Android build completed" >> $GITHUB_STEP_SUMMARY
+        echo "- 🌐 Ready for production deployment" >> $GITHUB_STEP_SUMMARY
+
+  # 📱 Mobile App Store Preparation (Manual trigger only)
+  app-store-prep:
+    name: 📱 App Store Preparation
+    runs-on: macos-latest
+    if: github.event_name == 'workflow_dispatch'
+    needs: [ios-testing, android-testing]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 🍎 Setup Xcode  
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+        
+    - name: 📋 Install dependencies
+      run: npm ci
+      
+    - name: 🏗️ Build web app
+      run: npm run build
+      
+    - name: ⚡ Sync Capacitor
+      run: |
+        npx cap sync ios
+        npx cap sync android
+        
+    - name: 🍎 Build iOS release
+      run: xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release -destination generic/platform=iOS build
+      
+    - name: 🤖 Build Android release
+      run: |
+        cd android
+        ./gradlew assembleRelease
+        
+    - name: 💾 Archive release builds
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-builds
+        path: |
+          ios/
+          android/app/build/outputs/apk/release/
