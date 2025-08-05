@@ -517,13 +517,11 @@ export const CartPilot: React.FC = () => {
         <div className="flex items-center justify-between mb-8">
           {/* Logo Section */}
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-green-400 via-orange-400 to-green-500 flex items-center justify-center shadow-lg relative overflow-hidden">
-              <img 
-                src="/favicon.ico" 
-                alt="CartPilot Logo" 
-                className="w-12 h-12 object-contain"
-              />
-            </div>
+            <img 
+              src="/favicon.ico" 
+              alt="CartPilot Logo" 
+              className="w-16 h-16 rounded-full object-cover shadow-lg"
+            />
             <div>
               <h1 className="text-3xl font-bold text-white">CARTPILOT</h1>
               <p className="text-purple-200 text-sm">Your Smart Shopping Navigator v1.0.1</p>
