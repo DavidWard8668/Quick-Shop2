@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CartPilot</string>
+    <string name="title_activity_main">CartPilot</string>
+    <string name="package_name">com.cartpilot.app</string>
+    <string name="custom_url_scheme">com.cartpilot.app</string>
+</resources>
