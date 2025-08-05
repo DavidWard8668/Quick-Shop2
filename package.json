@@ -1,7 +1,7 @@
 {
   "name": "cartpilot",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "CartPilot - Your intelligent in-store navigation companion",
   "scripts": {

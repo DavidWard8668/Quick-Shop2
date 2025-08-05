@@ -522,7 +522,7 @@ export const CartPilot: React.FC = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">CARTPILOT</h1>
-              <p className="text-purple-200 text-sm">Your Smart Shopping Navigator</p>
+              <p className="text-purple-200 text-sm">🚀 VERCEL SYNC TEST v1.0.1</p>
             </div>
           </div>
           
