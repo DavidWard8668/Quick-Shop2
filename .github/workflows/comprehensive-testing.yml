@@ -209,7 +209,7 @@ jobs:
     - name: 📝 Generate comprehensive report
       run: |
         echo "# 📊 Overnight Analysis Report - $(date)" > analysis-report.md
-        echo "## 🔒 Security Status" >> analysis-report-md
+        echo "## 🔒 Security Status" >> analysis-report.md
         npm audit --json > security-report.json || true
         echo "## 📦 Bundle Analysis" >> analysis-report.md
         du -sh dist/ >> analysis-report.md

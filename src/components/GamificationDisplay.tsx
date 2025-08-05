@@ -33,6 +33,22 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
   const [pointHistory, setPointHistory] = useState<any[]>(MOCK_POINT_HISTORY)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
 
+  // Fallback stats if userStats is not provided
+  const stats = userStats || {
+    points: 125,
+    contributions: 8,
+    rank: 4,
+    nextLevelPoints: 75,
+    level: 2,
+    accuracy: 94,
+    totalShopping: 23
+  }
+
+  const profile = userProfile || {
+    preferred_name: 'Navigator',
+    level: 'bronze'
+  }
+
   const getMembershipIcon = (level: string) => {
     switch (level) {
       case 'free': return '🎯'
@@ -55,16 +71,6 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
     }
   }
 
-  if (!userStats) {
-    return (
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6">
@@ -73,45 +79,45 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl font-bold mb-1">
-              {getMembershipIcon(userStats.membershipLevel)} {getMembershipName(userStats.membershipLevel)}
+              {getMembershipIcon(stats.membershipLevel || profile.level)} {getMembershipName(stats.membershipLevel || profile.level)}
             </h2>
             <p className="opacity-90">
-              {userProfile?.nickname || userProfile?.preferred_name || 'Pilot'}
+              {profile?.nickname || profile?.preferred_name || 'Pilot'}
             </p>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold">{userStats.points}</div>
+            <div className="text-3xl font-bold">{stats.points}</div>
             <div className="text-sm opacity-90">Points</div>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <div className="text-xl font-bold">{userStats.contributions}</div>
+            <div className="text-xl font-bold">{stats.contributions}</div>
             <div className="text-sm opacity-90">Contributions</div>
           </div>
           <div>
-            <div className="text-xl font-bold">#{userStats.rank || '?'}</div>
+            <div className="text-xl font-bold">#{stats.rank || '?'}</div>
             <div className="text-sm opacity-90">Global Rank</div>
           </div>
           <div>
-            <div className="text-xl font-bold">{userStats.nextLevelPoints || 0}</div>
+            <div className="text-xl font-bold">{stats.nextLevelPoints || 0}</div>
             <div className="text-sm opacity-90">To Next Level</div>
           </div>
         </div>
 
         {/* Progress bar to next level */}
-        {userStats.nextLevelPoints > 0 && (
+        {stats.nextLevelPoints > 0 && (
           <div className="mt-4">
             <div className="flex justify-between text-sm mb-1">
               <span>Progress to next level</span>
-              <span>{userStats.points} / {userStats.points + userStats.nextLevelPoints}</span>
+              <span>{stats.points} / {stats.points + stats.nextLevelPoints}</span>
             </div>
             <div className="w-full bg-white bg-opacity-20 rounded-full h-2">
               <div 
                 className="bg-white h-2 rounded-full transition-all duration-300" 
                 style={{ 
-                  width: `${(userStats.points / (userStats.points + userStats.nextLevelPoints)) * 100}%` 
+                  width: `${(stats.points / (stats.points + stats.nextLevelPoints)) * 100}%` 
                 }}
               ></div>
             </div>
