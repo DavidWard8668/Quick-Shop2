@@ -28,17 +28,16 @@ export const ReportIssue: React.FC<ReportIssueProps> = ({ userEmail, userId }) =
     setIsSubmitting(true)
     
     try {
-      // Capture current page info
-      const pageInfo = {
-        url: window.location.href,
-        userAgent: navigator.userAgent,
-        timestamp: new Date().toISOString(),
-        screenWidth: window.screen.width,
-        screenHeight: window.screen.height,
-        platform: navigator.platform
-      }
+      // Create VERY simple email body for maximum compatibility
+      const simpleBody = `${description}
 
-      // Try to store issue in Supabase for tracking (optional)
+From: ${userEmail || 'Anonymous User'}
+Type: ${issueType}`
+
+      // Use location.href directly, not window.location
+      const currentUrl = typeof window !== 'undefined' ? window.location.href : ''
+      
+      // Try to store in database (optional)
       try {
         await supabase
           .from('issue_reports')
@@ -48,57 +47,47 @@ export const ReportIssue: React.FC<ReportIssueProps> = ({ userEmail, userId }) =
             issue_type: issueType,
             subject: subject,
             description: description,
-            page_info: pageInfo,
+            page_info: { url: currentUrl },
             status: 'new'
           })
       } catch (dbError) {
-        console.warn('Could not save to database:', dbError)
-        // Continue with email - this is not critical
+        console.warn('Database save skipped:', dbError)
       }
 
-      // Create simplified email body (avoid mailto length limits)
-      const emailBody = `Issue: ${subject}
-
-Description: ${description}
-
-Type: ${issueType}
-User: ${userEmail || 'Anonymous'}
-URL: ${pageInfo.url}
-Time: ${new Date().toLocaleString()}`
-
-      // Try mailto first, then fallback to copy-to-clipboard
-      const mailtoLink = `mailto:exiledev8668@gmail.com?subject=[CartPilot] ${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`
+      // Create VERY SHORT mailto link to avoid browser issues
+      const mailtoLink = `mailto:exiledev8668@gmail.com?subject=${encodeURIComponent(`[CartPilot] ${subject}`)}&body=${encodeURIComponent(simpleBody)}`
       
       // Check if mailto URL is too long (browsers have ~2000 char limit)
-      if (mailtoLink.length > 1900) {
-        // Fallback: Copy to clipboard and show instructions
+      if (mailtoLink.length > 1800) {
+        // Fallback: Copy to clipboard
+        const clipboardText = `Email: exiledev8668@gmail.com
+Subject: [CartPilot] ${subject}
+
+${simpleBody}`
+        
         try {
-          await navigator.clipboard.writeText(`TO: exiledev8668@gmail.com
-SUBJECT: [CartPilot] ${subject}
-
-${emailBody}
-
-Technical Details:
-- Platform: ${pageInfo.platform}  
-- Screen: ${pageInfo.screenWidth}x${pageInfo.screenHeight}
-- User Agent: ${pageInfo.userAgent}`)
-
-          alert(`📋 Report copied to clipboard!\n\nPlease paste this into a new email to exiledev8668@gmail.com`)
+          await navigator.clipboard.writeText(clipboardText)
+          alert(`📋 Report copied to clipboard!\n\nPlease paste into your email app and send to:\nexiledev8668@gmail.com`)
         } catch (clipError) {
-          // Final fallback: show the email content in an alert
-          alert(`📧 Please email this report to: exiledev8668@gmail.com\n\nSubject: [CartPilot] ${subject}\n\n${emailBody}`)
+          alert(`📧 Please email this to: exiledev8668@gmail.com\n\nSubject: [CartPilot] ${subject}\n\n${simpleBody}`)
         }
       } else {
-        // URL is short enough for mailto
-        const opened = window.open(mailtoLink)
-        
-        // Check if popup was blocked
-        if (!opened) {
+        // Use window.location.href = mailtoLink instead of window.open for better compatibility
+        try {
+          // This approach works better on most browsers
+          window.location.href = mailtoLink
+        } catch (mailtoError) {
+          // If that fails, try clipboard
+          const clipboardText = `Email: exiledev8668@gmail.com
+Subject: [CartPilot] ${subject}
+
+${simpleBody}`
+          
           try {
-            await navigator.clipboard.writeText(emailBody)
-            alert(`📧 Please email to: exiledev8668@gmail.com\n\n📋 Report details copied to clipboard!`)
+            await navigator.clipboard.writeText(clipboardText)
+            alert(`📋 Report copied to clipboard!\n\nPlease paste into your email app.`)
           } catch (clipError) {
-            alert(`📧 Please email this to: exiledev8668@gmail.com\n\n${emailBody}`)
+            alert(`📧 Please email to: exiledev8668@gmail.com\n\n${simpleBody}`)
           }
         }
       }
