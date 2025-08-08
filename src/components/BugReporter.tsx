@@ -62,7 +62,7 @@ Type: ${issueType}`
       console.log('🎯 BugReporter v4.0 - Mailto URL:', mailtoUrl)
       console.log('🎯 BugReporter v4.0 - URL length:', mailtoUrl.length)
 
-      // Try to open email client
+      // Multiple email opening strategies
       if (mailtoUrl.length > 1800) {
         // Too long - use clipboard fallback
         try {
@@ -72,16 +72,61 @@ Type: ${issueType}`
           alert(`📧 Please email this to exiledev8668@gmail.com:\n\n${ultraMinimalBody}`)
         }
       } else {
-        // Should work - try mailto
+        // Try multiple methods to open email client
+        let emailOpened = false
+        
+        // Method 1: Try window.open first
         try {
-          window.location.href = mailtoUrl
-        } catch (mailtoError) {
-          try {
-            await navigator.clipboard.writeText(ultraMinimalBody)
-            alert('📋 Email client failed. Report copied to clipboard!')
-          } catch (clipError) {
-            alert(`📧 Please email to: exiledev8668@gmail.com\n\n${ultraMinimalBody}`)
+          console.log('🎯 Trying window.open method...')
+          const emailWindow = window.open(mailtoUrl, '_self')
+          if (emailWindow) {
+            emailOpened = true
+            console.log('🎯 window.open succeeded')
           }
+        } catch (error) {
+          console.log('🎯 window.open failed:', error)
+        }
+        
+        // Method 2: Try window.location.href if window.open failed
+        if (!emailOpened) {
+          try {
+            console.log('🎯 Trying window.location.href method...')
+            window.location.href = mailtoUrl
+            emailOpened = true
+            console.log('🎯 window.location.href executed')
+          } catch (error) {
+            console.log('🎯 window.location.href failed:', error)
+          }
+        }
+        
+        // Method 3: If both failed, provide manual options
+        if (!emailOpened) {
+          const emailContent = `To: exiledev8668@gmail.com
+Subject: [CartPilot] ${subject}
+
+${ultraMinimalBody}`
+          
+          try {
+            await navigator.clipboard.writeText(emailContent)
+            alert(`📋 Email client didn't open automatically. 
+            
+Report copied to clipboard!
+
+Please paste into your email app and send to:
+exiledev8668@gmail.com`)
+          } catch (clipError) {
+            alert(`📧 Email client unavailable. Please manually email:
+
+To: exiledev8668@gmail.com
+Subject: [CartPilot] ${subject}
+
+${ultraMinimalBody}`)
+          }
+        } else {
+          // Give user confirmation that email should be opening
+          setTimeout(() => {
+            alert('✅ Email client should be opening! If not, the report was copied to clipboard as backup.')
+          }, 1000)
         }
       }
 
