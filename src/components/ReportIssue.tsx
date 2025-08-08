@@ -187,7 +187,7 @@ ${simpleBody}`
               </div>
 
               <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
-                <p><strong>📧 How it works:</strong></p>
+                <p><strong>📧 How this works:</strong></p>
                 <ul className="mt-1 text-xs space-y-1">
                   <li>• Opens your email client automatically</li>
                   <li>• If blocked, copies report to clipboard</li>
