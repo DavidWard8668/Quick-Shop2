@@ -36,8 +36,9 @@ From: ${userEmail || 'Anonymous User'}
 Type: ${issueType}`
 
       // DEBUG: Show what we're actually sending
-      console.log('ReportIssue v3.0 - Email body:', minimalBody)
-      console.log('ReportIssue v3.0 - Email body length:', minimalBody.length)
+      console.log('🚨 ReportIssue v3.0 - Email body:', minimalBody)
+      console.log('🚨 ReportIssue v3.0 - Email body length:', minimalBody.length)
+      alert(`🚨 DEBUG v3.0: Email body length is ${minimalBody.length} characters`)
 
       // Try to store in database (optional) - don't include detailed page info
       try {
