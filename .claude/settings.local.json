@@ -21,7 +21,9 @@
       "Bash(cp:*)",
       "Bash(git pull:*)",
       "Bash(npm cache clean:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(powershell:*)",
+      "WebFetch(domain:cartpilot-sigma.vercel.app)"
     ],
     "deny": []
   }
