@@ -35,7 +35,7 @@ From: ${userEmail || 'Anonymous User'}
 Type: ${issueType}
 Time: ${new Date().toLocaleString()}`
 
-      console.log('🎯 BugReporter v6.0 - Submitting report with enhanced email client handling')
+      console.log('🎯 BugReporter v7.0 - Multiple clipboard methods + honest status reporting')
 
       // Try to store in database first
       try {
@@ -64,13 +64,40 @@ ${emailBody}`
       // Multiple email client opening methods
       const mailtoUrl = `mailto:exiledev8668@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
       
-      // Always copy to clipboard first
+      // Try multiple clipboard methods
+      let clipboardSuccess = false
+      
+      // Method 1: Modern clipboard API
       try {
         await navigator.clipboard.writeText(fullEmailContent)
-        console.log('✅ Report copied to clipboard')
+        clipboardSuccess = true
+        console.log('✅ Report copied to clipboard (modern API)')
+      } catch (clipError1) {
+        console.log('Modern clipboard API failed:', clipError1)
         
-        // Try multiple methods to open email client
-        let emailOpened = false
+        // Method 2: Create textarea and select/copy
+        try {
+          const textarea = document.createElement('textarea')
+          textarea.value = fullEmailContent
+          textarea.style.position = 'fixed'
+          textarea.style.left = '-999999px'
+          textarea.style.top = '-999999px'
+          document.body.appendChild(textarea)
+          textarea.focus()
+          textarea.select()
+          const copyResult = document.execCommand('copy')
+          document.body.removeChild(textarea)
+          if (copyResult) {
+            clipboardSuccess = true
+            console.log('✅ Report copied to clipboard (execCommand)')
+          }
+        } catch (clipError2) {
+          console.log('execCommand clipboard also failed:', clipError2)
+        }
+      }
+      
+      // Try multiple methods to open email client
+      let emailOpened = false
         
         // Method 1: Direct window.open
         if (mailtoUrl.length < 1900) {
@@ -111,33 +138,44 @@ ${emailBody}`
           }
         }
         
-        // Show appropriate success message
-        if (emailOpened) {
-          alert('✅ Report submitted!\n\n• Copied to clipboard\n• Email client opened\n\nIf email didn\'t open properly, paste from clipboard to:\nexiledev8668@gmail.com')
-        } else {
-          alert('📋 Report copied to clipboard!\n\n📧 Please paste into your email client and send to:\nexiledev8668@gmail.com\n\n(Email client auto-open not supported in your browser)')
-        }
+      // Show appropriate success message based on actual results
+      if (clipboardSuccess && emailOpened) {
+        alert('✅ Report submitted!\n\n• ✅ Copied to clipboard\n• ✅ Email client opened\n\nIf email didn\'t open properly, paste from clipboard to:\nexiledev8668@gmail.com')
+      } else if (clipboardSuccess && !emailOpened) {
+        alert('📋 Report copied to clipboard!\n\n📧 Please paste into your email client and send to:\nexiledev8668@gmail.com\n\n(Email client auto-open not supported in your browser)')
+      } else if (!clipboardSuccess && emailOpened) {
+        alert('📧 Email client opened!\n\n⚠️ Clipboard copy failed - please copy this text:\n\n' + fullEmailContent)
+      } else {
+        // Both failed - show manual instructions
+        alert('📧 MANUAL COPY REQUIRED:\n\nClipboard and email auto-open both failed.\n\nPlease copy this text and email to: exiledev8668@gmail.com\n\nSubject: ' + emailSubject + '\n\nMessage:\n' + emailBody)
         
-      } catch (clipError) {
-        console.error('Clipboard failed:', clipError)
-        // Final fallback - show content for manual copy
-        const fallbackMsg = `📧 MANUAL COPY REQUIRED:\n\nEmail this to: exiledev8668@gmail.com\n\nSubject: ${emailSubject}\n\nMessage:\n${emailBody}`
-        alert(fallbackMsg)
-        
-        // Also try to select text in a textarea for easy copying
-        const textarea = document.createElement('textarea')
-        textarea.value = fullEmailContent
-        textarea.style.position = 'fixed'
-        textarea.style.opacity = '0'
-        document.body.appendChild(textarea)
-        textarea.select()
+        // Try one more time with visible textarea for manual selection
         try {
-          document.execCommand('copy')
-          alert('Text selected for copying! Press Ctrl+C then paste into email client.')
+          const textarea = document.createElement('textarea')
+          textarea.value = fullEmailContent
+          textarea.style.position = 'fixed'
+          textarea.style.top = '50px'
+          textarea.style.left = '50px'
+          textarea.style.width = '500px'
+          textarea.style.height = '200px'
+          textarea.style.zIndex = '10000'
+          textarea.style.backgroundColor = 'white'
+          textarea.style.border = '2px solid red'
+          document.body.appendChild(textarea)
+          textarea.focus()
+          textarea.select()
+          
+          // Auto-remove after 10 seconds
+          setTimeout(() => {
+            if (document.body.contains(textarea)) {
+              document.body.removeChild(textarea)
+            }
+          }, 10000)
+          
+          console.log('Created visible textarea for manual copying')
         } catch (e) {
-          console.log('execCommand copy also failed')
+          console.log('Even visible textarea failed:', e)
         }
-        document.body.removeChild(textarea)
       }
 
       setSubmitted(true)
@@ -162,7 +200,7 @@ ${emailBody}`
         onClick={() => setIsOpen(true)}
         className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full shadow-lg z-50"
       >
-🚨 BUG REPORTER v6.0
+🚨 BUG REPORTER v7.0
       </Button>
     )
   }
@@ -172,7 +210,7 @@ ${emailBody}`
       <Card className="max-w-lg w-full">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Report an Issue (v6.0)</span>
+            <span>Report an Issue (v7.0)</span>
             <Button
               size="sm"
               variant="ghost"
@@ -187,7 +225,7 @@ ${emailBody}`
           {submitted ? (
             <div className="text-center py-8">
               <div className="text-4xl mb-4">✅</div>
-              <h3 className="text-lg font-semibold mb-2">Issue Reported! (v6.0)</h3>
+              <h3 className="text-lg font-semibold mb-2">Issue Reported! (v7.0)</h3>
               <p className="text-gray-600">Thank you for your feedback.</p>
             </div>
           ) : (
@@ -239,7 +277,7 @@ ${emailBody}`
               </div>
 
               <div className="bg-green-50 p-3 rounded-lg text-sm text-green-800">
-                <p><strong>✅ ENHANCED v6.0 Component:</strong></p>
+                <p><strong>✅ BULLETPROOF v7.0 Component:</strong></p>
                 <ul className="mt-1 text-xs space-y-1">
                   <li>• Clipboard-first reliable method</li>
                   <li>• Simplified email client opening</li>
@@ -253,7 +291,7 @@ ${emailBody}`
                 disabled={isSubmitting}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
               >
-                {isSubmitting ? 'Submitting...' : '📧 Submit Report (v6.0)'}
+                {isSubmitting ? 'Submitting...' : '📧 Submit Report (v7.0)'}
               </Button>
             </div>
           )}
