@@ -28,16 +28,13 @@ export const ReportIssue: React.FC<ReportIssueProps> = ({ userEmail, userId }) =
     setIsSubmitting(true)
     
     try {
-      // Create VERY simple email body for maximum compatibility
-      const simpleBody = `${description}
+      // Create minimal email body for maximum compatibility
+      const minimalBody = `${description}
 
 From: ${userEmail || 'Anonymous User'}
 Type: ${issueType}`
 
-      // Use location.href directly, not window.location
-      const currentUrl = typeof window !== 'undefined' ? window.location.href : ''
-      
-      // Try to store in database (optional)
+      // Try to store in database (optional) - don't include detailed page info
       try {
         await supabase
           .from('issue_reports')
@@ -47,15 +44,14 @@ Type: ${issueType}`
             issue_type: issueType,
             subject: subject,
             description: description,
-            page_info: { url: currentUrl },
             status: 'new'
           })
       } catch (dbError) {
         console.warn('Database save skipped:', dbError)
       }
 
-      // Create VERY SHORT mailto link to avoid browser issues
-      const mailtoLink = `mailto:exiledev8668@gmail.com?subject=${encodeURIComponent(`[CartPilot] ${subject}`)}&body=${encodeURIComponent(simpleBody)}`
+      // Create ULTRA SHORT mailto link to avoid ALL browser issues
+      const mailtoLink = `mailto:exiledev8668@gmail.com?subject=${encodeURIComponent(`[CartPilot] ${subject}`)}&body=${encodeURIComponent(minimalBody)}`
       
       // Check if mailto URL is too long (browsers have ~2000 char limit)
       if (mailtoLink.length > 1800) {
