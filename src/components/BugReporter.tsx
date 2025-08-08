@@ -20,8 +20,8 @@ export const BugReporter: React.FC<BugReporterProps> = ({ userEmail, userId }) =
   const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = async () => {
-    // IMMEDIATE ALERT TO CONFIRM NEW COMPONENT
-    alert('🎯 NEW BugReporter v4.0 component is running!')
+    // IMMEDIATE ALERT TO CONFIRM NEW COMPONENT IS RUNNING
+    alert('🚨🚨🚨 NEW BugReporter v4.0 IS RUNNING! 🚨🚨🚨')
     
     if (!subject.trim() || !description.trim()) {
       alert('Please fill in all fields')
@@ -107,7 +107,7 @@ Type: ${issueType}`
         onClick={() => setIsOpen(true)}
         className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full shadow-lg z-50"
       >
-        🐛 Report Bug (v4.0)
+🚨 NEW BUG REPORTER v4.0
       </Button>
     )
   }

@@ -122,7 +122,6 @@
     "vite-plugin-pwa": "^1.0.1",
     "vitest": "^3.2.4",
     "@playwright/test": "^1.40.0",
-    "@lighthouse-ci/cli": "^0.12.0",
     "allure-playwright": "^2.15.1",
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",

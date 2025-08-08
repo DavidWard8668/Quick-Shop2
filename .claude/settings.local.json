@@ -18,7 +18,10 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(true)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(git pull:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }
