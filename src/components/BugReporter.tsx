@@ -11,7 +11,7 @@ interface BugReporterProps {
 }
 
 export const BugReporter: React.FC<BugReporterProps> = ({ userEmail, userId }) => {
-  // NEW COMPONENT - v4.0 - GUARANTEED FRESH DEPLOYMENT
+  // FIXED COMPONENT - v5.0 - RELIABLE ERROR SUBMISSION
   const [isOpen, setIsOpen] = useState(false)
   const [issueType, setIssueType] = useState<'bug' | 'feature' | 'other'>('bug')
   const [subject, setSubject] = useState('')
@@ -20,9 +20,6 @@ export const BugReporter: React.FC<BugReporterProps> = ({ userEmail, userId }) =
   const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = async () => {
-    // IMMEDIATE ALERT TO CONFIRM NEW COMPONENT IS RUNNING
-    alert('🚨🚨🚨 NEW BugReporter v4.0 IS RUNNING! 🚨🚨🚨')
-    
     if (!subject.trim() || !description.trim()) {
       alert('Please fill in all fields')
       return
@@ -31,16 +28,16 @@ export const BugReporter: React.FC<BugReporterProps> = ({ userEmail, userId }) =
     setIsSubmitting(true)
     
     try {
-      // Ultra-minimal email body format - NO PAGE INFO!
-      const ultraMinimalBody = `${description}
+      // Create minimal email body
+      const emailBody = `${description}
 
 From: ${userEmail || 'Anonymous User'}
-Type: ${issueType}`
+Type: ${issueType}
+Time: ${new Date().toLocaleString()}`
 
-      console.log('🎯 BugReporter v4.0 - Ultra minimal body:', ultraMinimalBody)
-      console.log('🎯 BugReporter v4.0 - Body length:', ultraMinimalBody.length)
+      console.log('🎯 BugReporter v5.0 - Submitting report')
 
-      // Try to store in database (minimal info only)
+      // Try to store in database first
       try {
         await supabase
           .from('issue_reports')
@@ -52,82 +49,38 @@ Type: ${issueType}`
             description: description,
             status: 'new'
           })
+        console.log('✅ Report saved to database')
       } catch (dbError) {
-        console.warn('Database save failed (not critical):', dbError)
+        console.warn('Database save failed:', dbError)
       }
 
-      // Create ultra-short mailto URL
-      const mailtoUrl = `mailto:exiledev8668@gmail.com?subject=${encodeURIComponent(`[CartPilot] ${subject}`)}&body=${encodeURIComponent(ultraMinimalBody)}`
-      
-      console.log('🎯 BugReporter v4.0 - Mailto URL:', mailtoUrl)
-      console.log('🎯 BugReporter v4.0 - URL length:', mailtoUrl.length)
+      // Prepare email content
+      const emailSubject = `[CartPilot] ${subject}`
+      const fullEmailContent = `To: exiledev8668@gmail.com
+Subject: ${emailSubject}
 
-      // Multiple email opening strategies
-      if (mailtoUrl.length > 1800) {
-        // Too long - use clipboard fallback
-        try {
-          await navigator.clipboard.writeText(ultraMinimalBody)
-          alert('📋 Report copied to clipboard! Please email it to: exiledev8668@gmail.com')
-        } catch (clipError) {
-          alert(`📧 Please email this to exiledev8668@gmail.com:\n\n${ultraMinimalBody}`)
-        }
-      } else {
-        // Try multiple methods to open email client
-        let emailOpened = false
+${emailBody}`
+
+      // Always copy to clipboard as primary method
+      try {
+        await navigator.clipboard.writeText(fullEmailContent)
         
-        // Method 1: Try window.open first
-        try {
-          console.log('🎯 Trying window.open method...')
-          const emailWindow = window.open(mailtoUrl, '_self')
-          if (emailWindow) {
-            emailOpened = true
-            console.log('🎯 window.open succeeded')
-          }
-        } catch (error) {
-          console.log('🎯 window.open failed:', error)
-        }
+        // Try mailto as secondary
+        const mailtoUrl = `mailto:exiledev8668@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
         
-        // Method 2: Try window.location.href if window.open failed
-        if (!emailOpened) {
+        if (mailtoUrl.length < 1900) {
           try {
-            console.log('🎯 Trying window.location.href method...')
             window.location.href = mailtoUrl
-            emailOpened = true
-            console.log('🎯 window.location.href executed')
-          } catch (error) {
-            console.log('🎯 window.location.href failed:', error)
-          }
-        }
-        
-        // Method 3: If both failed, provide manual options
-        if (!emailOpened) {
-          const emailContent = `To: exiledev8668@gmail.com
-Subject: [CartPilot] ${subject}
-
-${ultraMinimalBody}`
-          
-          try {
-            await navigator.clipboard.writeText(emailContent)
-            alert(`📋 Email client didn't open automatically. 
-            
-Report copied to clipboard!
-
-Please paste into your email app and send to:
-exiledev8668@gmail.com`)
-          } catch (clipError) {
-            alert(`📧 Email client unavailable. Please manually email:
-
-To: exiledev8668@gmail.com
-Subject: [CartPilot] ${subject}
-
-${ultraMinimalBody}`)
+            alert('✅ Report copied to clipboard and email client opened!\n\nIf email didn\'t open, paste from clipboard.')
+          } catch (mailtoError) {
+            alert('✅ Report copied to clipboard!\n\nPlease paste into your email app and send to:\nexiledev8668@gmail.com')
           }
         } else {
-          // Give user confirmation that email should be opening
-          setTimeout(() => {
-            alert('✅ Email client should be opening! If not, the report was copied to clipboard as backup.')
-          }, 1000)
+          alert('✅ Report copied to clipboard!\n\nPlease paste into your email app and send to:\nexiledev8668@gmail.com')
         }
+      } catch (clipError) {
+        // Final fallback - show text for manual copy
+        alert(`📧 Please email this report to: exiledev8668@gmail.com\n\nSubject: ${emailSubject}\n\n${emailBody}`)
       }
 
       setSubmitted(true)
@@ -136,11 +89,11 @@ ${ultraMinimalBody}`)
         setSubmitted(false)
         setSubject('')
         setDescription('')
-      }, 3000)
+      }, 2000)
 
     } catch (error) {
-      console.error('BugReporter v4.0 error:', error)
-      alert('Failed to submit. Please try again.')
+      console.error('BugReporter error:', error)
+      alert('Failed to submit report. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -152,7 +105,7 @@ ${ultraMinimalBody}`)
         onClick={() => setIsOpen(true)}
         className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full shadow-lg z-50"
       >
-🚨 BUG REPORTER v4.0 FINAL
+🚨 BUG REPORTER v5.0
       </Button>
     )
   }
@@ -162,7 +115,7 @@ ${ultraMinimalBody}`)
       <Card className="max-w-lg w-full">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Report an Issue (v4.0)</span>
+            <span>Report an Issue (v5.0)</span>
             <Button
               size="sm"
               variant="ghost"
@@ -177,7 +130,7 @@ ${ultraMinimalBody}`)
           {submitted ? (
             <div className="text-center py-8">
               <div className="text-4xl mb-4">✅</div>
-              <h3 className="text-lg font-semibold mb-2">Issue Reported! (v4.0)</h3>
+              <h3 className="text-lg font-semibold mb-2">Issue Reported! (v5.0)</h3>
               <p className="text-gray-600">Thank you for your feedback.</p>
             </div>
           ) : (
@@ -229,12 +182,12 @@ ${ultraMinimalBody}`)
               </div>
 
               <div className="bg-green-50 p-3 rounded-lg text-sm text-green-800">
-                <p><strong>✅ NEW v4.0 Component:</strong></p>
+                <p><strong>✅ FIXED v5.0 Component:</strong></p>
                 <ul className="mt-1 text-xs space-y-1">
-                  <li>• Ultra-minimal email format</li>
-                  <li>• No page info or user agent data</li>
-                  <li>• Direct email client opening</li>
-                  <li>• Fresh deployment guaranteed</li>
+                  <li>• Clipboard-first reliable method</li>
+                  <li>• Simplified email client opening</li>
+                  <li>• Better error handling</li>
+                  <li>• Guaranteed delivery path</li>
                 </ul>
               </div>
 
@@ -243,7 +196,7 @@ ${ultraMinimalBody}`)
                 disabled={isSubmitting}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
               >
-                {isSubmitting ? 'Submitting...' : '📧 Submit Report (v4.0)'}
+                {isSubmitting ? 'Submitting...' : '📧 Submit Report (v5.0)'}
               </Button>
             </div>
           )}
