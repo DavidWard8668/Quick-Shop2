@@ -52,7 +52,7 @@ interface UserProfile {
 
 export const CartPilot: React.FC = () => {
   // Core state
-  const [activeTab, setActiveTab] = useState<'stores' | 'navigate' | 'cart' | 'pilot'>('stores')
+  const [activeTab, setActiveTab] = useState<'stores' | 'navigate' | 'cart' | 'map' | 'pilot'>('stores')
   const [user, setUser] = useState<User | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [userStats, setUserStats] = useState<{
@@ -65,6 +65,15 @@ export const CartPilot: React.FC = () => {
     totalShopping: number
     membershipLevel?: string
   } | null>(null)
+  
+  // Route planning state
+  const [plannedRoute, setPlannedRoute] = useState<Array<{
+    name: string
+    aisle: number
+    section: string
+    completed: boolean
+  }>>([])
+  const [routeGenerated, setRouteGenerated] = useState(false)
   
   // Store state
   const [stores, setStores] = useState<StoreData[]>([])
@@ -444,16 +453,15 @@ export const CartPilot: React.FC = () => {
     
     // Create mock route optimization
     const routeItems = cartItems.map(item => ({
-      ...item,
+      name: item.name,
       aisle: Math.floor(Math.random() * 10) + 1, // Mock aisle number
-      section: ['Produce', 'Dairy', 'Meat', 'Bakery', 'Frozen', 'Pantry'][Math.floor(Math.random() * 6)]
+      section: ['Produce', 'Dairy', 'Meat', 'Bakery', 'Frozen', 'Pantry'][Math.floor(Math.random() * 6)],
+      completed: false
     })).sort((a, b) => a.aisle - b.aisle) // Sort by aisle
 
-    const routeText = routeItems
-      .map((item, index) => `${index + 1}. ${item.name} - Aisle ${item.aisle} (${item.section})`)
-      .join('\n')
-
-    alert(`🗺️ Optimal Shopping Route at ${selectedStore.name}:\n\n${routeText}\n\nTip: Shop in aisle order to save time!`)
+    setPlannedRoute(routeItems)
+    setRouteGenerated(true)
+    setActiveTab('map') // Switch to map tab to show the route
     
     // Award points for using route planning
     if (user) {
@@ -719,6 +727,18 @@ export const CartPilot: React.FC = () => {
             }`}
           >
             🛒 Cart
+          </Button>
+          <Button
+            onClick={() => setActiveTab('map')}
+            disabled={!selectedStore || cartItems.length === 0}
+            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+              activeTab === 'map' 
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
+                : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 disabled:opacity-50'
+            }`}
+          >
+            🗺️ Map
+            {routeGenerated && <Badge className="bg-blue-500 text-white ml-1">Route Ready</Badge>}
           </Button>
           <Button
             onClick={() => setActiveTab('pilot')}
@@ -1121,6 +1141,212 @@ export const CartPilot: React.FC = () => {
                   </Button>
                 </CardContent>
               </Card>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'map' && (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+                🗺️ Store Navigation Map
+              </h2>
+              {selectedStore && (
+                <p className="text-white/80 text-lg">
+                  Optimal shopping route for <span className="font-semibold">{selectedStore.name}</span>
+                </p>
+              )}
+            </div>
+
+            {!routeGenerated ? (
+              <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl">
+                <CardContent className="p-8 text-center">
+                  <div className="mb-6">
+                    <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                      🗺️
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">No Route Planned Yet</h3>
+                    <p className="text-gray-600 mb-4">
+                      Generate an optimal shopping route to see your path through the store
+                    </p>
+                  </div>
+                  <div className="space-y-3 text-left bg-blue-50 rounded-lg p-4 mb-6">
+                    <h4 className="font-semibold text-blue-800">📋 To create a route:</h4>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• Add items to your cart</li>
+                      <li>• Go to the Cart tab</li>
+                      <li>• Click "🗺 Plan Optimal Route"</li>
+                      <li>• Return here to see your map!</li>
+                    </ul>
+                  </div>
+                  <Button
+                    onClick={() => setActiveTab('cart')}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3"
+                  >
+                    Go to Cart
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                {/* Route Overview Card */}
+                <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl">
+                  <CardHeader>
+                    <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        🎯 Your Optimal Route
+                      </span>
+                      <Button
+                        onClick={handlePlanOptimalRoute}
+                        variant="outline"
+                        size="sm"
+                        className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                      >
+                        🔄 Regenerate
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4">
+                      {/* Stats Row */}
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="bg-emerald-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-emerald-600">{plannedRoute.length}</div>
+                          <div className="text-sm text-emerald-700">Items</div>
+                        </div>
+                        <div className="bg-blue-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {Math.max(...plannedRoute.map(item => item.aisle), 0)}
+                          </div>
+                          <div className="text-sm text-blue-700">Max Aisle</div>
+                        </div>
+                        <div className="bg-purple-50 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-bold text-purple-600">
+                            {plannedRoute.filter(item => item.completed).length}
+                          </div>
+                          <div className="text-sm text-purple-700">Collected</div>
+                        </div>
+                      </div>
+
+                      {/* Visual Store Map */}
+                      <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                        <h4 className="font-semibold text-gray-800 mb-4 text-center">🏪 Store Layout</h4>
+                        <div className="space-y-2">
+                          {Array.from(new Set(plannedRoute.map(item => item.aisle)))
+                            .sort((a, b) => a - b)
+                            .map(aisleNum => {
+                              const aisleItems = plannedRoute.filter(item => item.aisle === aisleNum)
+                              return (
+                                <div key={aisleNum} className="flex items-center gap-4 p-3 bg-white rounded-lg border">
+                                  <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center font-bold text-blue-600">
+                                    {aisleNum}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="font-medium text-gray-800">Aisle {aisleNum}</div>
+                                    <div className="text-sm text-gray-600">
+                                      {aisleItems.map(item => item.section).join(', ')}
+                                    </div>
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                      {aisleItems.map((item, idx) => (
+                                        <span
+                                          key={idx}
+                                          className={`px-2 py-1 rounded-full text-xs ${
+                                            item.completed 
+                                              ? 'bg-green-100 text-green-800' 
+                                              : 'bg-gray-100 text-gray-700'
+                                          }`}
+                                        >
+                                          {item.completed ? '✅' : '📦'} {item.name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                        </div>
+                      </div>
+
+                      {/* Route List */}
+                      <div>
+                        <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                          📝 Shopping Checklist
+                          <Badge variant="outline" className="ml-auto">
+                            {plannedRoute.filter(item => item.completed).length}/{plannedRoute.length}
+                          </Badge>
+                        </h4>
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {plannedRoute.map((item, index) => (
+                            <div
+                              key={index}
+                              className={`flex items-center gap-4 p-3 rounded-lg border transition-all ${
+                                item.completed 
+                                  ? 'bg-green-50 border-green-200' 
+                                  : 'bg-white border-gray-200 hover:bg-gray-50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Button
+                                  size="sm"
+                                  variant={item.completed ? "default" : "outline"}
+                                  className={`w-8 h-8 p-0 ${
+                                    item.completed 
+                                      ? 'bg-green-500 hover:bg-green-600' 
+                                      : 'hover:bg-emerald-50'
+                                  }`}
+                                  onClick={() => {
+                                    setPlannedRoute(prev => 
+                                      prev.map((routeItem, idx) => 
+                                        idx === index 
+                                          ? { ...routeItem, completed: !routeItem.completed }
+                                          : routeItem
+                                      )
+                                    )
+                                  }}
+                                >
+                                  {item.completed ? '✅' : index + 1}
+                                </Button>
+                                <div className="flex-1">
+                                  <div className={`font-medium ${item.completed ? 'text-green-800 line-through' : 'text-gray-800'}`}>
+                                    {item.name}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    Aisle {item.aisle} • {item.section}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3 pt-4 border-t">
+                        <Button
+                          onClick={() => {
+                            setPlannedRoute(prev => prev.map(item => ({ ...item, completed: true })))
+                          }}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          ✅ Mark All Complete
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setPlannedRoute([])
+                            setRouteGenerated(false)
+                            setActiveTab('cart')
+                          }}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          🔄 New Route
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </div>
         )}
