@@ -9,7 +9,7 @@ import { GamificationDisplay } from "./GamificationDisplay";
 import { AuthModal } from "./AuthModal";
 import { ChangePasswordModal } from "./ChangePasswordModal";
 import LoadingSpinner from "./LoadingSpinner";
-import { ReportIssue } from "./ReportIssue";
+import { BugReporter } from "./BugReporter";
 import { AddProductLocation } from "./AddProductLocation";
 import { UserTutorial } from "./UserTutorial";
 import { AIStoreMapper } from "./AIStoreMapper";
@@ -1208,8 +1208,8 @@ export const CartPilot: React.FC = () => {
         onMappingComplete={handleStoreMappingComplete}
       />
 
-      {/* Report Issue Button */}
-      <ReportIssue 
+      {/* Bug Reporter Button - v4.0 */}
+      <BugReporter 
         userEmail={user?.email} 
         userId={user?.id}
       />
