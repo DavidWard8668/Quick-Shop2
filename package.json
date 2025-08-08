@@ -18,7 +18,21 @@
     "typecheck": "tsc --noEmit",
     "cap:build": "npm run build && npx cap sync",
     "cap:ios": "npx cap open ios",
-    "cap:android": "npx cap open android"
+    "cap:android": "npx cap open android",
+    "videos:generate": "node scripts/generate-walkthrough-videos.js",
+    "videos:serve": "npx http-server videos -p 3001 -o",
+    "test:e2e": "npx playwright test",
+    "test:e2e:headed": "npx playwright test --headed",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:e2e:mobile": "npx playwright test --project='Mobile Chrome' --project='Mobile Safari' --project='Android Chrome'",
+    "test:e2e:desktop": "npx playwright test --project='chromium' --project='firefox' --project='webkit'",
+    "test:e2e:critical": "npx playwright test tests/e2e/01-user-onboarding.e2e.ts tests/e2e/02-store-search-selection.e2e.ts tests/e2e/05-shopping-cart.e2e.ts",
+    "test:visual": "npx playwright test tests/visual-regression/",
+    "test:performance": "npx playwright test tests/performance/",
+    "lighthouse": "npx lighthouse-ci autorun",
+    "test:all": "npm run test:run && npm run test:e2e && npm run lighthouse",
+    "subagents:start": "node tests/subagents/runner.js",
+    "subagents:config": "node tests/subagents/runner.js tests/subagents/config.json"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",
@@ -106,6 +120,12 @@
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1",
     "vite-plugin-pwa": "^1.0.1",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@playwright/test": "^1.40.0",
+    "@lighthouse-ci/cli": "^0.12.0",
+    "allure-playwright": "^2.15.1",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
+    "wait-on": "^7.2.0"
   }
 }

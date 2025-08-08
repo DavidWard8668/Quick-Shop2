@@ -12,6 +12,7 @@ import LoadingSpinner from "./LoadingSpinner";
 import { ReportIssue } from "./ReportIssue";
 import { AddProductLocation } from "./AddProductLocation";
 import { UserTutorial } from "./UserTutorial";
+import { AIStoreMapper } from "./AIStoreMapper";
 // TODO: Implement these components for enhanced functionality
 // import { ShoppingRouteBuilder } from "./ShoppingRouteBuilder";
 // import { SmartSuggestions } from "./SmartSuggestions";
@@ -89,6 +90,7 @@ export const CartPilot: React.FC = () => {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
   const [showAddProductModal, setShowAddProductModal] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
+  const [showAIMapper, setShowAIMapper] = useState(false)
   
   // Shopping cart state
   const [cartItems, setCartItems] = useState<{
@@ -479,6 +481,43 @@ export const CartPilot: React.FC = () => {
     }
   }
 
+  // Handle AI store mapping
+  const handleAIStoreMapping = (store?: any) => {
+    if (!user) {
+      setShowAuthModal(true)
+      return
+    }
+
+    setSelectedStore(store || selectedStore)
+    setShowAIMapper(true)
+  }
+
+  // Handle store mapping completion
+  const handleStoreMappingComplete = async (mappingData: any) => {
+    try {
+      // Award significant points for store mapping
+      await awardPoints(user.id, 'store_mapping_complete', 50)
+      
+      // Bonus for high accuracy
+      if (mappingData.confidence_score > 0.85) {
+        await awardPoints(user.id, 'high_accuracy_mapping', 25)
+      }
+      
+      alert(`🎉 Store mapping complete! You earned ${mappingData.confidence_score > 0.85 ? '75' : '50'} points!\n\nThank you for helping build the most accurate store maps!`)
+      
+      // Refresh user stats
+      const stats = await getUserStats(user.id)
+      setUserStats(stats)
+      
+      // TODO: Save mapping data to database
+      console.log('Store mapping data:', mappingData)
+      
+    } catch (error) {
+      console.error('Error processing store mapping:', error)
+      alert('Thanks for the mapping contribution! (Note: Points system temporarily unavailable)')
+    }
+  }
+
   // Handle PWA install
   const handlePWAInstall = async () => {
     if (isIOS) {
@@ -813,18 +852,26 @@ export const CartPilot: React.FC = () => {
                           )}
                         </div>
                         
-                        <div className="flex gap-3">
+                        <div className="space-y-2">
+                          <div className="flex gap-3">
+                            <Button 
+                              onClick={() => handleNavigateToStore(store)}
+                              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-lg font-semibold shadow-lg"
+                            >
+                              🧭 Navigate Here
+                            </Button>
+                            <Button 
+                              onClick={() => handleStoreSelect(store)}
+                              className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 py-3 rounded-lg font-semibold"
+                            >
+                              🛒 Shop Here
+                            </Button>
+                          </div>
                           <Button 
-                            onClick={() => handleNavigateToStore(store)}
-                            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-lg font-semibold shadow-lg"
+                            onClick={() => handleAIStoreMapping(store)}
+                            className="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 rounded-lg font-semibold shadow-lg text-sm"
                           >
-                            🧭 Navigate Here
-                          </Button>
-                          <Button 
-                            onClick={() => handleStoreSelect(store)}
-                            className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 py-3 rounded-lg font-semibold"
-                          >
-                            🛒 Shop Here
+                            🤖 AI Map Store (+50 Points)
                           </Button>
                         </div>
                       </CardContent>
@@ -1150,6 +1197,15 @@ export const CartPilot: React.FC = () => {
         isOpen={showTutorial}
         onClose={() => setShowTutorial(false)}
         onComplete={() => setShowTutorial(false)}
+      />
+
+      {/* AI Store Mapper */}
+      <AIStoreMapper
+        isOpen={showAIMapper}
+        storeId={selectedStore?.id}
+        storeName={selectedStore?.name}
+        onClose={() => setShowAIMapper(false)}
+        onMappingComplete={handleStoreMappingComplete}
       />
 
       {/* Report Issue Button */}

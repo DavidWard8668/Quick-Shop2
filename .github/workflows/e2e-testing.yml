@@ -1,0 +1,359 @@
+name: 'E2E Testing with Subagents'
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - mobile
+        - desktop
+        - critical
+      browser:
+        description: 'Browser to test'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - chromium
+        - firefox
+        - webkit
+
+jobs:
+  e2e-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      test-matrix: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+      - name: Generate test matrix
+        id: generate-matrix
+        run: |
+          if [ "${{ github.event.inputs.test_suite }}" = "mobile" ]; then
+            echo 'matrix={"browser":["Mobile Chrome","Mobile Safari","Android Chrome"],"shard":[1,2,3]}' >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.inputs.test_suite }}" = "desktop" ]; then
+            echo 'matrix={"browser":["chromium","firefox","webkit"],"shard":[1,2]}' >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.inputs.test_suite }}" = "critical" ]; then
+            echo 'matrix={"browser":["Mobile Chrome","chromium"],"shard":[1]}' >> $GITHUB_OUTPUT
+          else
+            echo 'matrix={"browser":["Mobile Chrome","Mobile Safari","Android Chrome","chromium","firefox"],"shard":[1,2,3,4]}' >> $GITHUB_OUTPUT
+          fi
+
+  e2e-tests:
+    needs: e2e-setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.e2e-setup.outputs.test-matrix) }}
+    
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173
+
+      - name: Run Playwright tests
+        run: |
+          if [ "${{ matrix.browser }}" = "all" ]; then
+            npx playwright test --shard=${{ matrix.shard }}/4
+          else
+            npx playwright test --project="${{ matrix.browser }}" --shard=${{ matrix.shard }}/4
+          fi
+        env:
+          PLAYWRIGHT_WORKERS: 2
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results-${{ matrix.browser }}-shard-${{ matrix.shard }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshots-${{ matrix.browser }}-shard-${{ matrix.shard }}
+          path: test-results/screenshots/
+          retention-days: 7
+
+  lighthouse-performance:
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: './lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+
+  visual-regression:
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173
+
+      - name: Run visual regression tests
+        run: |
+          npx playwright test tests/visual-regression/ --project=chromium
+        env:
+          PLAYWRIGHT_WORKERS: 1
+
+      - name: Upload visual diff results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-regression-diffs
+          path: test-results/visual-diffs/
+
+  test-report:
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, lighthouse-performance, visual-regression]
+    if: always()
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Generate comprehensive test report
+        run: |
+          echo "# E2E Test Report - $(date)" > test-report.md
+          echo "" >> test-report.md
+          
+          # Test Results Summary
+          echo "## Test Results Summary" >> test-report.md
+          echo "" >> test-report.md
+          
+          # Count passed/failed tests
+          total_tests=0
+          failed_tests=0
+          
+          for result_dir in playwright-results-*/; do
+            if [ -d "$result_dir" ]; then
+              if [ -f "$result_dir/results.json" ]; then
+                tests=$(jq '.stats.expected + .stats.unexpected + .stats.skipped' "$result_dir/results.json" 2>/dev/null || echo "0")
+                failures=$(jq '.stats.unexpected' "$result_dir/results.json" 2>/dev/null || echo "0")
+                total_tests=$((total_tests + tests))
+                failed_tests=$((failed_tests + failures))
+              fi
+            fi
+          done
+          
+          passed_tests=$((total_tests - failed_tests))
+          
+          echo "- **Total Tests**: $total_tests" >> test-report.md
+          echo "- **Passed**: $passed_tests ✅" >> test-report.md
+          echo "- **Failed**: $failed_tests ❌" >> test-report.md
+          echo "- **Success Rate**: $(( passed_tests * 100 / total_tests ))%" >> test-report.md
+          echo "" >> test-report.md
+          
+          # Performance Summary
+          if [ -d "lighthouse-results" ]; then
+            echo "## Performance Summary" >> test-report.md
+            echo "Lighthouse performance tests completed. See artifacts for detailed results." >> test-report.md
+            echo "" >> test-report.md
+          fi
+          
+          # Visual Regression Summary
+          if [ -d "visual-regression-diffs" ]; then
+            echo "## Visual Regression Summary" >> test-report.md
+            echo "⚠️ Visual differences detected. See artifacts for screenshots." >> test-report.md
+            echo "" >> test-report.md
+          fi
+          
+          # Failed Tests Details
+          if [ $failed_tests -gt 0 ]; then
+            echo "## Failed Tests Details" >> test-report.md
+            echo "" >> test-report.md
+            
+            for result_dir in playwright-results-*/; do
+              if [ -f "$result_dir/results.json" ]; then
+                browser=$(echo "$result_dir" | sed 's/playwright-results-\(.*\)-shard-.*/\1/')
+                echo "### Browser: $browser" >> test-report.md
+                jq -r '.suites[].specs[] | select(.tests[].results[].status == "failed") | "- " + .title' "$result_dir/results.json" 2>/dev/null >> test-report.md || true
+                echo "" >> test-report.md
+              fi
+            done
+          fi
+          
+          # Next Steps
+          echo "## Recommended Actions" >> test-report.md
+          echo "" >> test-report.md
+          
+          if [ $failed_tests -gt 0 ]; then
+            echo "1. 🔍 Review failed test details and screenshots" >> test-report.md
+            echo "2. 🐛 Fix identified issues in the codebase" >> test-report.md
+            echo "3. 🔄 Re-run tests to verify fixes" >> test-report.md
+          else
+            echo "✅ All tests passed! No immediate action required." >> test-report.md
+          fi
+          
+          echo "4. 📊 Review performance metrics from Lighthouse" >> test-report.md
+          echo "5. 🎨 Check visual regression results if available" >> test-report.md
+
+      - name: Upload comprehensive test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: comprehensive-test-report
+          path: test-report.md
+
+      - name: Comment PR with test results
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            
+            try {
+              const report = fs.readFileSync('test-report.md', 'utf8');
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: report
+              });
+            } catch (error) {
+              console.log('Could not read test report:', error);
+            }
+
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, lighthouse-performance, visual-regression]
+    if: failure() && (github.ref == 'refs/heads/main' || github.event_name == 'schedule')
+    
+    steps:
+      - name: Send Slack notification on failure
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#cartpilot-alerts'
+          text: |
+            🚨 E2E Tests Failed!
+            
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+            
+            Check the failed tests: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  cleanup-old-artifacts:
+    runs-on: ubuntu-latest
+    needs: [test-report]
+    if: always()
+    
+    steps:
+      - name: Delete old artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listArtifactsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            
+            // Keep only the last 10 test reports
+            const testReports = artifacts.data.artifacts
+              .filter(artifact => artifact.name.includes('test-report'))
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+              .slice(10);
+            
+            for (const artifact of testReports) {
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+              });
+            }

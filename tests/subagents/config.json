@@ -1,0 +1,312 @@
+{
+  "subagents": [
+    {
+      "name": "mobile-testing-agent",
+      "description": "Automated mobile device testing across iOS and Android",
+      "schedule": {
+        "interval": "daily",
+        "time": "02:00",
+        "timezone": "UTC"
+      },
+      "tasks": [
+        {
+          "name": "mobile-critical-path",
+          "command": "npx playwright test --project='Mobile Chrome' --project='Mobile Safari' tests/e2e/01-user-onboarding.e2e.ts tests/e2e/02-store-search-selection.e2e.ts tests/e2e/05-shopping-cart.e2e.ts",
+          "timeout": 1800000,
+          "retries": 2,
+          "critical": true
+        },
+        {
+          "name": "mobile-extended-features",
+          "command": "npx playwright test --project='Android Chrome' tests/e2e/03-product-search.e2e.ts tests/e2e/04-barcode-scanning.e2e.ts",
+          "timeout": 1200000,
+          "retries": 1,
+          "critical": false
+        }
+      ],
+      "reporting": {
+        "slack_webhook": "${SLACK_WEBHOOK_URL}",
+        "email_alerts": ["dev-team@cartpilot.com"],
+        "generate_report": true,
+        "screenshot_on_failure": true
+      },
+      "conditions": {
+        "run_on_failure": true,
+        "max_consecutive_failures": 3,
+        "escalate_after": 5
+      }
+    },
+    {
+      "name": "cross-browser-agent",
+      "description": "Cross-browser compatibility testing",
+      "schedule": {
+        "interval": "weekly",
+        "day": "sunday",
+        "time": "01:00",
+        "timezone": "UTC"
+      },
+      "tasks": [
+        {
+          "name": "full-browser-suite",
+          "command": "npx playwright test --project='chromium' --project='firefox' --project='webkit'",
+          "timeout": 2700000,
+          "retries": 1,
+          "critical": true
+        },
+        {
+          "name": "browser-specific-features",
+          "command": "npx playwright test tests/e2e/04-barcode-scanning.e2e.ts --project='chromium'",
+          "timeout": 600000,
+          "retries": 2,
+          "critical": false
+        }
+      ],
+      "reporting": {
+        "generate_report": true,
+        "include_performance": true,
+        "visual_comparison": true
+      }
+    },
+    {
+      "name": "performance-monitoring-agent",
+      "description": "Continuous performance and lighthouse monitoring",
+      "schedule": {
+        "interval": "hourly",
+        "minutes": [0, 30]
+      },
+      "tasks": [
+        {
+          "name": "lighthouse-audit",
+          "command": "npx lighthouse-ci autorun",
+          "timeout": 600000,
+          "retries": 1,
+          "critical": true
+        },
+        {
+          "name": "web-vitals-check",
+          "command": "npx playwright test tests/performance/web-vitals.spec.ts",
+          "timeout": 300000,
+          "retries": 1,
+          "critical": false
+        }
+      ],
+      "thresholds": {
+        "performance_score": 80,
+        "accessibility_score": 95,
+        "best_practices_score": 90,
+        "seo_score": 85,
+        "largest_contentful_paint": 2500,
+        "first_input_delay": 100,
+        "cumulative_layout_shift": 0.1
+      },
+      "reporting": {
+        "performance_alerts": true,
+        "trend_analysis": true,
+        "regression_detection": true
+      }
+    },
+    {
+      "name": "regression-testing-agent",
+      "description": "Automated regression testing on code changes",
+      "triggers": [
+        "pull_request",
+        "push_to_main",
+        "scheduled_weekly"
+      ],
+      "schedule": {
+        "interval": "weekly",
+        "day": "friday",
+        "time": "18:00",
+        "timezone": "UTC"
+      },
+      "tasks": [
+        {
+          "name": "smoke-tests",
+          "command": "npx playwright test tests/e2e/01-user-onboarding.e2e.ts tests/e2e/02-store-search-selection.e2e.ts --project='Mobile Chrome'",
+          "timeout": 900000,
+          "retries": 3,
+          "critical": true
+        },
+        {
+          "name": "full-regression-suite",
+          "command": "npx playwright test",
+          "timeout": 3600000,
+          "retries": 1,
+          "critical": true
+        },
+        {
+          "name": "visual-regression",
+          "command": "npx playwright test tests/visual-regression/",
+          "timeout": 1800000,
+          "retries": 1,
+          "critical": false
+        }
+      ],
+      "reporting": {
+        "comparison_baseline": "main_branch",
+        "failure_analysis": true,
+        "auto_bisect": true
+      }
+    },
+    {
+      "name": "accessibility-testing-agent",
+      "description": "Automated accessibility compliance testing",
+      "schedule": {
+        "interval": "daily",
+        "time": "03:00",
+        "timezone": "UTC"
+      },
+      "tasks": [
+        {
+          "name": "axe-accessibility-audit",
+          "command": "npx playwright test tests/accessibility/axe-audit.spec.ts",
+          "timeout": 600000,
+          "retries": 1,
+          "critical": true
+        },
+        {
+          "name": "keyboard-navigation",
+          "command": "npx playwright test tests/accessibility/keyboard-nav.spec.ts",
+          "timeout": 600000,
+          "retries": 1,
+          "critical": true
+        },
+        {
+          "name": "screen-reader-compat",
+          "command": "npx playwright test tests/accessibility/screen-reader.spec.ts",
+          "timeout": 600000,
+          "retries": 1,
+          "critical": false
+        }
+      ],
+      "compliance": {
+        "standards": ["WCAG-2.1-AA", "Section-508"],
+        "enforce_standards": true,
+        "generate_compliance_report": true
+      }
+    },
+    {
+      "name": "data-validation-agent",
+      "description": "End-to-end data flow and API testing",
+      "schedule": {
+        "interval": "every_6_hours"
+      },
+      "tasks": [
+        {
+          "name": "api-health-check",
+          "command": "npx playwright test tests/api/health-check.spec.ts",
+          "timeout": 300000,
+          "retries": 3,
+          "critical": true
+        },
+        {
+          "name": "database-integration",
+          "command": "npx playwright test tests/integration/database.spec.ts",
+          "timeout": 600000,
+          "retries": 2,
+          "critical": true
+        },
+        {
+          "name": "external-services",
+          "command": "npx playwright test tests/integration/external-apis.spec.ts",
+          "timeout": 600000,
+          "retries": 1,
+          "critical": false
+        }
+      ],
+      "monitoring": {
+        "track_api_responses": true,
+        "database_performance": true,
+        "third_party_uptime": true
+      }
+    }
+  ],
+  "global_config": {
+    "environment": {
+      "base_url": "https://cartpilot-sigma.vercel.app",
+      "test_database": "cartpilot_test",
+      "parallel_workers": 4,
+      "timeout_default": 30000
+    },
+    "reporting": {
+      "output_directory": "test-results/subagent-reports",
+      "retain_reports_days": 30,
+      "video_on_failure": true,
+      "screenshot_on_failure": true,
+      "trace_on_retry": true
+    },
+    "notifications": {
+      "channels": {
+        "slack": {
+          "webhook_url": "${SLACK_WEBHOOK_URL}",
+          "channel": "#cartpilot-testing",
+          "mention_on_failure": ["@dev-team"]
+        },
+        "email": {
+          "smtp_server": "${SMTP_SERVER}",
+          "recipients": ["alerts@cartpilot.com"]
+        },
+        "discord": {
+          "webhook_url": "${DISCORD_WEBHOOK_URL}",
+          "guild_id": "${DISCORD_GUILD_ID}"
+        }
+      },
+      "escalation": {
+        "critical_failures": 1,
+        "consecutive_failures": 3,
+        "performance_degradation": 2
+      }
+    },
+    "auto_recovery": {
+      "enabled": true,
+      "max_retry_attempts": 3,
+      "retry_delay": 60000,
+      "auto_revert_on_failure": false
+    },
+    "analytics": {
+      "collect_metrics": true,
+      "trend_analysis": true,
+      "anomaly_detection": true,
+      "performance_baseline": true
+    }
+  },
+  "device_lab": {
+    "physical_devices": [
+      {
+        "name": "iPhone-13-Pro",
+        "type": "iOS",
+        "version": "16.0",
+        "screen_size": "6.1",
+        "available": true
+      },
+      {
+        "name": "Samsung-Galaxy-S21",
+        "type": "Android",
+        "version": "12",
+        "screen_size": "6.2",
+        "available": true
+      },
+      {
+        "name": "iPad-Pro-11",
+        "type": "iOS",
+        "version": "16.0",
+        "screen_size": "11.0",
+        "available": true
+      }
+    ],
+    "cloud_testing": {
+      "enabled": true,
+      "provider": "BrowserStack",
+      "devices": [
+        "iPhone 14 Pro",
+        "iPhone 12",
+        "iPhone SE",
+        "Samsung Galaxy S22",
+        "Samsung Galaxy Note 20",
+        "Google Pixel 6",
+        "iPad Pro 12.9",
+        "Samsung Galaxy Tab S8"
+      ]
+    }
+  }
+}
