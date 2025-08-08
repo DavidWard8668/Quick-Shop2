@@ -10,6 +10,7 @@ import { AuthModal } from "./AuthModal";
 import { ChangePasswordModal } from "./ChangePasswordModal";
 import LoadingSpinner from "./LoadingSpinner";
 import { BugReporter } from "./BugReporter";
+import { BarcodeScanner } from "./BarcodeScanner";
 import { AddProductLocation } from "./AddProductLocation";
 import { UserTutorial } from "./UserTutorial";
 import { AIStoreMapper } from "./AIStoreMapper";
@@ -74,6 +75,9 @@ export const CartPilot: React.FC = () => {
     completed: boolean
   }>>([])
   const [routeGenerated, setRouteGenerated] = useState(false)
+  
+  // Barcode scanner state
+  const [isScannerOpen, setIsScannerOpen] = useState(false)
   
   // Store state
   const [stores, setStores] = useState<StoreData[]>([])
@@ -469,6 +473,33 @@ export const CartPilot: React.FC = () => {
         getUserStats(user.id).then(stats => setUserStats(stats))
       }).catch(console.error)
     }
+  }
+
+  // Handle barcode scanning
+  const handleBarcodeScanned = (barcode: string, productInfo: any) => {
+    console.log('📱 Barcode scanned:', barcode, productInfo)
+    
+    // Add scanned product to cart
+    const newItem = {
+      id: Date.now().toString(),
+      name: productInfo.name || 'Scanned Product',
+      completed: false,
+      category: productInfo.category || 'Scanned Item',
+      brand: productInfo.brand
+    }
+    
+    setCartItems(prev => [...prev, newItem])
+    setIsScannerOpen(false)
+    
+    // Award points for barcode scanning
+    if (user) {
+      awardPoints(user.id, 'barcode_scan').then(() => {
+        getUserStats(user.id).then(stats => setUserStats(stats))
+      }).catch(console.error)
+    }
+    
+    // Show success message
+    alert(`✅ Added "${newItem.name}" to your cart!`)
   }
 
   // Handle start shopping
@@ -938,6 +969,27 @@ export const CartPilot: React.FC = () => {
                   onAddToCart={(product) => handleAddItem(product.name)}
                   cartItems={cartItems}
                 />
+
+                {/* Barcode Scanner Card */}
+                <Card className="bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-xl rounded-2xl">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-2xl">
+                        📱
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg">Barcode Scanner</h3>
+                        <p className="text-white/80 text-sm">Scan products instantly with your camera</p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => setIsScannerOpen(true)}
+                      className="w-full bg-white text-blue-600 hover:bg-gray-100 py-3 rounded-lg font-semibold shadow-lg transition-all"
+                    >
+                      📷 Open Barcode Scanner (+5 Points)
+                    </Button>
+                  </CardContent>
+                </Card>
 
                 <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl">
                   <CardContent className="p-6">
@@ -1434,7 +1486,14 @@ export const CartPilot: React.FC = () => {
         onMappingComplete={handleStoreMappingComplete}
       />
 
-      {/* Bug Reporter Button - v4.0 */}
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onBarcodeScanned={handleBarcodeScanned}
+      />
+
+      {/* Bug Reporter Button - v5.0 */}
       <BugReporter 
         userEmail={user?.email} 
         userId={user?.id}
