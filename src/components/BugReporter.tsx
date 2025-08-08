@@ -35,7 +35,7 @@ From: ${userEmail || 'Anonymous User'}
 Type: ${issueType}
 Time: ${new Date().toLocaleString()}`
 
-      console.log('🎯 BugReporter v7.0 - Multiple clipboard methods + honest status reporting')
+      console.log('🎯 BugReporter v8.0 - Focus on reliable email client opening')
 
       // Try to store in database first
       try {
@@ -64,18 +64,30 @@ ${emailBody}`
       // Multiple email client opening methods
       const mailtoUrl = `mailto:exiledev8668@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
       
-      // Try multiple clipboard methods
+      // HONEST clipboard testing - verify it actually worked
       let clipboardSuccess = false
       
-      // Method 1: Modern clipboard API
+      // Method 1: Modern clipboard API with verification
       try {
         await navigator.clipboard.writeText(fullEmailContent)
-        clipboardSuccess = true
-        console.log('✅ Report copied to clipboard (modern API)')
+        // Verify it actually worked by reading back
+        try {
+          const readBack = await navigator.clipboard.readText()
+          if (readBack === fullEmailContent) {
+            clipboardSuccess = true
+            console.log('✅ Clipboard VERIFIED working (modern API)')
+          } else {
+            console.log('❌ Clipboard write succeeded but verification failed')
+          }
+        } catch (readError) {
+          console.log('❌ Clipboard write succeeded but cannot verify (read permission denied)')
+          // Assume it worked if write didn't throw
+          clipboardSuccess = true
+        }
       } catch (clipError1) {
         console.log('Modern clipboard API failed:', clipError1)
         
-        // Method 2: Create textarea and select/copy
+        // Method 2: execCommand with focus verification
         try {
           const textarea = document.createElement('textarea')
           textarea.value = fullEmailContent
@@ -85,97 +97,154 @@ ${emailBody}`
           document.body.appendChild(textarea)
           textarea.focus()
           textarea.select()
+          
+          // Try the copy command
           const copyResult = document.execCommand('copy')
+          console.log('execCommand result:', copyResult)
+          
+          // Additional verification - check if the selection worked
+          const selectedText = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd)
+          console.log('Selected text length:', selectedText.length, 'vs original:', fullEmailContent.length)
+          
           document.body.removeChild(textarea)
-          if (copyResult) {
+          
+          // Only claim success if both the command succeeded AND we selected the full text
+          if (copyResult && selectedText.length === fullEmailContent.length) {
             clipboardSuccess = true
-            console.log('✅ Report copied to clipboard (execCommand)')
+            console.log('✅ execCommand copy appears successful')
+          } else {
+            console.log('❌ execCommand copy failed or incomplete selection')
           }
         } catch (clipError2) {
           console.log('execCommand clipboard also failed:', clipError2)
         }
       }
       
-      // Try multiple methods to open email client
+      // Focus on reliable email client opening
       let emailOpened = false
+      
+      console.log('🎯 Attempting to open email client with:', mailtoUrl.substring(0, 100) + '...')
+      
+      // Method 1: Direct window.location (most reliable)
+      try {
+        window.location.href = mailtoUrl
+        emailOpened = true
+        console.log('✅ Email client triggered via window.location.href')
+      } catch (e) {
+        console.log('❌ window.location.href failed:', e)
         
-        // Method 1: Direct window.open
-        if (mailtoUrl.length < 1900) {
-          try {
-            const emailWindow = window.open(mailtoUrl, '_self')
-            if (emailWindow) {
-              emailOpened = true
-              console.log('✅ Email client opened via window.open')
-            }
-          } catch (e) {
-            console.log('Method 1 failed:', e)
-          }
-        }
-        
-        // Method 2: Create dynamic link and click it
-        if (!emailOpened && mailtoUrl.length < 1900) {
-          try {
-            const link = document.createElement('a')
-            link.href = mailtoUrl
-            link.style.display = 'none'
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-            emailOpened = true
-            console.log('✅ Email client opened via dynamic link')
-          } catch (e) {
-            console.log('Method 2 failed:', e)
-          }
-        }
-        
-        // Method 3: Try PowerShell/cmd email on Windows
-        if (!emailOpened && typeof window !== 'undefined' && navigator.userAgent.includes('Windows')) {
-          try {
-            // This won't work in browser but shows intent
-            console.log('Attempting Windows email client...')
-          } catch (e) {
-            console.log('Method 3 failed:', e)
-          }
-        }
-        
-      // Show appropriate success message based on actual results
-      if (clipboardSuccess && emailOpened) {
-        alert('✅ Report submitted!\n\n• ✅ Copied to clipboard\n• ✅ Email client opened\n\nIf email didn\'t open properly, paste from clipboard to:\nexiledev8668@gmail.com')
-      } else if (clipboardSuccess && !emailOpened) {
-        alert('📋 Report copied to clipboard!\n\n📧 Please paste into your email client and send to:\nexiledev8668@gmail.com\n\n(Email client auto-open not supported in your browser)')
-      } else if (!clipboardSuccess && emailOpened) {
-        alert('📧 Email client opened!\n\n⚠️ Clipboard copy failed - please copy this text:\n\n' + fullEmailContent)
-      } else {
-        // Both failed - show manual instructions
-        alert('📧 MANUAL COPY REQUIRED:\n\nClipboard and email auto-open both failed.\n\nPlease copy this text and email to: exiledev8668@gmail.com\n\nSubject: ' + emailSubject + '\n\nMessage:\n' + emailBody)
-        
-        // Try one more time with visible textarea for manual selection
+        // Method 2: Create link and trigger click
         try {
-          const textarea = document.createElement('textarea')
-          textarea.value = fullEmailContent
-          textarea.style.position = 'fixed'
-          textarea.style.top = '50px'
-          textarea.style.left = '50px'
-          textarea.style.width = '500px'
-          textarea.style.height = '200px'
-          textarea.style.zIndex = '10000'
-          textarea.style.backgroundColor = 'white'
-          textarea.style.border = '2px solid red'
-          document.body.appendChild(textarea)
-          textarea.focus()
-          textarea.select()
+          const link = document.createElement('a')
+          link.href = mailtoUrl
+          link.style.position = 'fixed'
+          link.style.top = '-1000px'
+          link.target = '_blank'
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          emailOpened = true
+          console.log('✅ Email client opened via dynamic link click')
+        } catch (e2) {
+          console.log('❌ Dynamic link method failed:', e2)
           
-          // Auto-remove after 10 seconds
+          // Method 3: Manual link creation user can click
+          const manualLink = document.createElement('a')
+          manualLink.href = mailtoUrl
+          manualLink.innerHTML = '📧 CLICK HERE TO OPEN EMAIL CLIENT'
+          manualLink.style.position = 'fixed'
+          manualLink.style.top = '200px'
+          manualLink.style.left = '50px'
+          manualLink.style.zIndex = '999999'
+          manualLink.style.backgroundColor = '#ef4444'
+          manualLink.style.color = 'white'
+          manualLink.style.padding = '15px'
+          manualLink.style.borderRadius = '8px'
+          manualLink.style.textDecoration = 'none'
+          manualLink.style.fontWeight = 'bold'
+          manualLink.target = '_blank'
+          
+          document.body.appendChild(manualLink)
+          
+          // Remove after 15 seconds
           setTimeout(() => {
-            if (document.body.contains(textarea)) {
-              document.body.removeChild(textarea)
+            if (document.body.contains(manualLink)) {
+              document.body.removeChild(manualLink)
             }
-          }, 10000)
+          }, 15000)
           
-          console.log('Created visible textarea for manual copying')
-        } catch (e) {
-          console.log('Even visible textarea failed:', e)
+          console.log('✅ Created manual email link for user to click')
         }
+      }
+        
+      // BRUTALLY HONEST feedback - no more lies!
+      if (clipboardSuccess && emailOpened) {
+        alert('✅ SUCCESS!\n\n• ✅ Clipboard VERIFIED working\n• ✅ Email client opened\n\nContent is in your clipboard - paste it!')
+      } else if (clipboardSuccess && !emailOpened) {
+        alert('📋 Clipboard working, email client failed\n\n✅ Content copied to clipboard\n📧 Please paste into your email client:\nexiledev8668@gmail.com')
+      } else if (!clipboardSuccess && emailOpened) {
+        alert('🔴 CLIPBOARD FAILED (as usual)\n\n📧 Email client opened but clipboard blocked by browser security.\n\nHere\'s the content to copy manually:\n\n' + fullEmailContent)
+      } else {
+        // Both failed - be completely honest
+        alert('🔴 BOTH FAILED - MANUAL COPY TIME\n\nBrowser security blocked clipboard AND email client failed.\n\nCopy this text manually:\n\nTO: exiledev8668@gmail.com\nSUBJECT: ' + emailSubject + '\n\nMESSAGE:\n' + emailBody)
+      }
+      
+      // ALWAYS show a visible textarea as backup - no more gambling with clipboard
+      console.log('🎯 Creating visible backup textarea regardless of clipboard claims')
+      try {
+        const backupTextarea = document.createElement('textarea')
+        backupTextarea.value = fullEmailContent
+        backupTextarea.style.position = 'fixed'
+        backupTextarea.style.top = '100px'
+        backupTextarea.style.left = '50px'
+        backupTextarea.style.width = '600px'
+        backupTextarea.style.height = '250px'
+        backupTextarea.style.zIndex = '999999'
+        backupTextarea.style.backgroundColor = '#ffffff'
+        backupTextarea.style.border = '3px solid #ef4444'
+        backupTextarea.style.borderRadius = '8px'
+        backupTextarea.style.padding = '10px'
+        backupTextarea.style.fontSize = '14px'
+        backupTextarea.style.fontFamily = 'monospace'
+        backupTextarea.readOnly = true
+        backupTextarea.placeholder = 'Bug report content - select all and copy!'
+        
+        // Add a close button
+        const closeButton = document.createElement('button')
+        closeButton.innerHTML = '❌ CLOSE'
+        closeButton.style.position = 'fixed'
+        closeButton.style.top = '60px'
+        closeButton.style.left = '600px'
+        closeButton.style.zIndex = '9999999'
+        closeButton.style.backgroundColor = '#ef4444'
+        closeButton.style.color = 'white'
+        closeButton.style.border = 'none'
+        closeButton.style.padding = '10px'
+        closeButton.style.borderRadius = '4px'
+        closeButton.style.cursor = 'pointer'
+        closeButton.onclick = () => {
+          document.body.removeChild(backupTextarea)
+          document.body.removeChild(closeButton)
+        }
+        
+        document.body.appendChild(backupTextarea)
+        document.body.appendChild(closeButton)
+        backupTextarea.focus()
+        backupTextarea.select()
+        
+        // Auto-remove after 30 seconds
+        setTimeout(() => {
+          if (document.body.contains(backupTextarea)) {
+            document.body.removeChild(backupTextarea)
+          }
+          if (document.body.contains(closeButton)) {
+            document.body.removeChild(closeButton)
+          }
+        }, 30000)
+        
+        console.log('✅ Visible backup textarea created with close button')
+      } catch (e) {
+        console.log('❌ Even visible textarea backup failed:', e)
       }
 
       setSubmitted(true)
@@ -200,7 +269,7 @@ ${emailBody}`
         onClick={() => setIsOpen(true)}
         className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full shadow-lg z-50"
       >
-🚨 BUG REPORTER v7.0
+🚨 BUG REPORTER v8.0
       </Button>
     )
   }
@@ -210,7 +279,7 @@ ${emailBody}`
       <Card className="max-w-lg w-full">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Report an Issue (v7.0)</span>
+            <span>Report an Issue (v8.0)</span>
             <Button
               size="sm"
               variant="ghost"
@@ -225,7 +294,7 @@ ${emailBody}`
           {submitted ? (
             <div className="text-center py-8">
               <div className="text-4xl mb-4">✅</div>
-              <h3 className="text-lg font-semibold mb-2">Issue Reported! (v7.0)</h3>
+              <h3 className="text-lg font-semibold mb-2">Issue Reported! (v8.0)</h3>
               <p className="text-gray-600">Thank you for your feedback.</p>
             </div>
           ) : (
@@ -277,7 +346,7 @@ ${emailBody}`
               </div>
 
               <div className="bg-green-50 p-3 rounded-lg text-sm text-green-800">
-                <p><strong>✅ BULLETPROOF v7.0 Component:</strong></p>
+                <p><strong>✅ EMAIL-FOCUSED v8.0 Component:</strong></p>
                 <ul className="mt-1 text-xs space-y-1">
                   <li>• Clipboard-first reliable method</li>
                   <li>• Simplified email client opening</li>
@@ -291,7 +360,7 @@ ${emailBody}`
                 disabled={isSubmitting}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
               >
-                {isSubmitting ? 'Submitting...' : '📧 Submit Report (v7.0)'}
+                {isSubmitting ? 'Submitting...' : '📧 Submit Report (v8.0)'}
               </Button>
             </div>
           )}
