@@ -3,13 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
-import { ProductSearch } from './ProductSearch'
+import { EnhancedProductSearch } from './EnhancedProductSearch'
 import { AllergenChecker } from "./AllergenChecker";
 import { GamificationDisplay } from "./GamificationDisplay";
 import { AuthModal } from "./AuthModal";
 import { ChangePasswordModal } from "./ChangePasswordModal";
-import { ShoppingRouteBuilder } from "./ShoppingRouteBuilder";
-import { SmartSuggestions } from "./SmartSuggestions";
+import LoadingSpinner from "./LoadingSpinner";
+import { ReportIssue } from "./ReportIssue";
+// TODO: Implement these components for enhanced functionality
+// import { ShoppingRouteBuilder } from "./ShoppingRouteBuilder";
+// import { SmartSuggestions } from "./SmartSuggestions";
 import { getCurrentUser, signOut, testSupabaseConnection, supabase } from "../supabaseClient";
 import { User } from '@supabase/supabase-js';
 import {
@@ -96,6 +99,7 @@ export const CartPilot: React.FC = () => {
   // PWA install state
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(true)
+  const [isIOS, setIsIOS] = useState(false)
 
   // Calculate distance between two coordinates
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
@@ -210,7 +214,7 @@ export const CartPilot: React.FC = () => {
           }
         })
         .filter((store: StoreData) => store.distance! <= 20) // Only show stores within 20 miles
-        .sort((a: Store, b: Store) => a.distance! - b.distance!) // Sort by distance
+        .sort((a: StoreData, b: StoreData) => a.distance! - b.distance!) // Sort by distance
       
       console.log('Final result:', storesWithDistance.length, 'stores')
       setStores(storesWithDistance)
@@ -432,7 +436,11 @@ export const CartPilot: React.FC = () => {
 
   // Handle PWA install
   const handlePWAInstall = async () => {
-    if (deferredPrompt) {
+    if (isIOS) {
+      // iOS specific instructions
+      alert('To install CartPilot on iOS:\n\n1. Tap the Share button (box with arrow)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" in the top right corner\n\nNote: You must be using Safari browser on iOS')
+    } else if (deferredPrompt) {
+      // Chrome/Edge/Android
       deferredPrompt.prompt()
       const { outcome } = await deferredPrompt.userChoice
       if (outcome === 'accepted') {
@@ -440,8 +448,8 @@ export const CartPilot: React.FC = () => {
       }
       setDeferredPrompt(null)
     } else {
-      // Fallback instructions
-      alert('To install CartPilot:\n\n• Chrome/Edge: Click the install icon in the address bar\n• Safari: Tap Share → Add to Home Screen\n• Firefox: Add to Home Screen from the menu')
+      // Other browsers fallback
+      alert('To install CartPilot:\n\n• Chrome/Edge: Click the install icon in the address bar\n• Firefox: Add to Home Screen from the menu\n• Safari on Mac: Not supported - use Chrome or Edge')
     }
   }
 
@@ -494,16 +502,22 @@ export const CartPilot: React.FC = () => {
   useEffect(() => {
     initializeApp()
     
-    // Listen for PWA install prompt
-    const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-    }
+    // Detect iOS
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+    setIsIOS(isIOSDevice)
     
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    // Listen for PWA install prompt (not supported on iOS)
+    if (!isIOSDevice) {
+      const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
+        e.preventDefault()
+        setDeferredPrompt(e)
+      }
+      
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      }
     }
   }, [])
 
@@ -511,9 +525,9 @@ export const CartPilot: React.FC = () => {
   const storeCount = stores.length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-700">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-700 overflow-x-hidden">
       {/* Header */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-8">
           {/* Logo Section */}
           <div className="flex items-center gap-4">
@@ -669,10 +683,11 @@ export const CartPilot: React.FC = () => {
             </Card>
 
             {isSearching && (
-              <div className="text-center py-8">
-                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-gray-600">Searching for nearby stores...</p>
-              </div>
+              <LoadingSpinner 
+                message="Searching for nearby stores..."
+                size="lg"
+                className="py-8"
+              />
             )}
 
             {stores.length === 0 && !isSearching ? (
@@ -788,10 +803,10 @@ export const CartPilot: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                <ProductSearch 
+                <EnhancedProductSearch 
                   selectedStore={selectedStore}
-                  onSearch={handleProductSearch}
-                  searchResults={searchResults}
+                  onAddToCart={(product) => handleAddItem(product.name)}
+                  cartItems={cartItems}
                 />
 
                 <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl">
@@ -1041,6 +1056,12 @@ export const CartPilot: React.FC = () => {
           }}
         />
       )}
+      
+      {/* Report Issue Button */}
+      <ReportIssue 
+        userEmail={user?.email} 
+        userId={user?.id}
+      />
     </div>
   )
 }

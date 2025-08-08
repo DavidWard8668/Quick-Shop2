@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(gh run list:*)",
+      "Bash(/c/Users/David/AppData/Local/GitHubDesktop/bin/github --help)",
+      "Bash(choco install:*)",
+      "Bash(curl:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx vite:*)",
+      "Bash(npm run test:run:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}

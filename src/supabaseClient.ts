@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Your Supabase credentials
-const supabaseUrl = 'https://klcyuohvcgzxyefpprjl.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsY3l1b2h2Y2d6eHllZnBwcmpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM1MjU2MzgsImV4cCI6MjA2OTEwMTYzOH0.eAlqIrIoj8KfFGKQFfUUKwKDTV5_TdDhbgf0h0Sn0OM'
+// Supabase credentials from environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://klcyuohvcgzxyefpprjl.supabase.co'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsY3l1b2h2Y2d6eHllZnBwcmpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM1MjU2MzgsImV4cCI6MjA2OTEwMTYzOH0.eAlqIrIoj8KfFGKQFfUUKwKDTV5_TdDhbgf0h0Sn0OM'
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+  throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY')
 }
 
 // Create single Supabase client instance

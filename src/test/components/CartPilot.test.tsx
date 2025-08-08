@@ -49,7 +49,7 @@ describe('CartPilot', () => {
     render(<CartPilot />)
     
     expect(screen.getByText('CARTPILOT')).toBeInTheDocument()
-    expect(screen.getByText('Your Smart Shopping Navigator')).toBeInTheDocument()
+    expect(screen.getByText('Your Smart Shopping Navigator v1.0.1')).toBeInTheDocument()
   })
 
   it('displays navigation tabs', () => {

@@ -8,7 +8,13 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(npm run test:*)"
+      "Bash(npm run test:*)",
+      "WebFetch(domain:cartpilot-sigma.vercel.app)",
+      "Bash(npm run build:*)",
+      "Bash(npm test)",
+      "Bash(npm run lint)",
+      "Bash(npm run typecheck:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
