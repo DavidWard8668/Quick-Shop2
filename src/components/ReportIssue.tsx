@@ -38,20 +38,23 @@ export const ReportIssue: React.FC<ReportIssueProps> = ({ userEmail, userId }) =
         platform: navigator.platform
       }
 
-      // Store issue in Supabase for tracking
-      const { error } = await supabase
-        .from('issue_reports')
-        .insert({
-          user_id: userId,
-          user_email: userEmail,
-          issue_type: issueType,
-          subject: subject,
-          description: description,
-          page_info: pageInfo,
-          status: 'new'
-        })
-
-      if (error) throw error
+      // Try to store issue in Supabase for tracking (optional)
+      try {
+        await supabase
+          .from('issue_reports')
+          .insert({
+            user_id: userId,
+            user_email: userEmail,
+            issue_type: issueType,
+            subject: subject,
+            description: description,
+            page_info: pageInfo,
+            status: 'new'
+          })
+      } catch (dbError) {
+        console.warn('Could not save to database:', dbError)
+        // Continue with email - this is not critical
+      }
 
       // Create email body
       const emailBody = `

@@ -10,6 +10,7 @@ import { AuthModal } from "./AuthModal";
 import { ChangePasswordModal } from "./ChangePasswordModal";
 import LoadingSpinner from "./LoadingSpinner";
 import { ReportIssue } from "./ReportIssue";
+import { AddProductLocation } from "./AddProductLocation";
 // TODO: Implement these components for enhanced functionality
 // import { ShoppingRouteBuilder } from "./ShoppingRouteBuilder";
 // import { SmartSuggestions } from "./SmartSuggestions";
@@ -85,6 +86,7 @@ export const CartPilot: React.FC = () => {
   // Auth state
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
+  const [showAddProductModal, setShowAddProductModal] = useState(false)
   
   // Shopping cart state
   const [cartItems, setCartItems] = useState<{
@@ -408,29 +410,70 @@ export const CartPilot: React.FC = () => {
       return
     }
 
-    if (!selectedStore) {
-      alert('Please select a store first.')
-      return
-    }
+    setShowAddProductModal(true)
+  }
 
-    // For now, show a simple prompt for product location
-    const productName = prompt('Enter product name:')
-    const aisleLocation = prompt('Enter aisle/section (e.g., Aisle 3 - Dairy):')
+  // Handle product location success
+  const handleProductLocationSuccess = async (productData: any) => {
+    try {
+      // Award points for contributing product location
+      await awardPoints(user.id, 'product_location_added', 10)
+      
+      alert(`Thanks for adding "${productData.name}" in "Aisle ${productData.location.aisle} - ${productData.location.section}"! You earned 10 points! 🎉`)
+      
+      // Refresh user stats
+      const stats = await getUserStats(user.id)
+      setUserStats(stats)
+      
+      // TODO: Save to database
+      console.log('Product location data:', productData)
+      
+    } catch (error) {
+      console.error('Error adding product location:', error)
+      alert('Thanks for the contribution! (Note: Points system temporarily unavailable)')
+    }
+  }
+
+  // Handle plan optimal route
+  const handlePlanOptimalRoute = () => {
+    if (!selectedStore || cartItems.length === 0) return
     
-    if (productName && aisleLocation) {
-      try {
-        // Award points for contributing product location
-        await awardPoints(user.id, 'product_location_added', 10)
-        
-        alert(`Thanks for adding "${productName}" in "${aisleLocation}" at ${selectedStore.name}! You earned 10 points! 🎉`)
-        
-        // Refresh user stats
-        const stats = await getUserStats(user.id)
-        setUserStats(stats)
-      } catch (error) {
-        console.error('Error adding product location:', error)
-        alert('Thanks for the contribution! (Note: Points system temporarily unavailable)')
+    // Create mock route optimization
+    const routeItems = cartItems.map(item => ({
+      ...item,
+      aisle: Math.floor(Math.random() * 10) + 1, // Mock aisle number
+      section: ['Produce', 'Dairy', 'Meat', 'Bakery', 'Frozen', 'Pantry'][Math.floor(Math.random() * 6)]
+    })).sort((a, b) => a.aisle - b.aisle) // Sort by aisle
+
+    const routeText = routeItems
+      .map((item, index) => `${index + 1}. ${item.name} - Aisle ${item.aisle} (${item.section})`)
+      .join('\n')
+
+    alert(`🗺️ Optimal Shopping Route at ${selectedStore.name}:\n\n${routeText}\n\nTip: Shop in aisle order to save time!`)
+    
+    // Award points for using route planning
+    if (user) {
+      awardPoints(user.id, 'route_planned').then(() => {
+        getUserStats(user.id).then(stats => setUserStats(stats))
+      }).catch(console.error)
+    }
+  }
+
+  // Handle start shopping
+  const handleStartShopping = () => {
+    if (!selectedStore || cartItems.length === 0) return
+    
+    const confirmStart = confirm(`Ready to start shopping at ${selectedStore.name}?\n\nYour ${cartItems.length} items are ready!\n\nTip: Use the checkboxes to mark items as you find them.`)
+    
+    if (confirmStart) {
+      // Award points for starting shopping
+      if (user) {
+        awardPoints(user.id, 'shopping_started').then(() => {
+          getUserStats(user.id).then(stats => setUserStats(stats))
+        }).catch(console.error)
       }
+      
+      alert('🛒 Happy shopping! Mark off items as you find them. CartPilot is here to help! 🎉')
     }
   }
 
@@ -538,7 +581,7 @@ export const CartPilot: React.FC = () => {
             />
             <div>
               <h1 className="text-3xl font-bold text-white">CARTPILOT</h1>
-              <p className="text-purple-200 text-sm">Your Smart Shopping Navigator v1.0.1</p>
+              <p className="text-purple-200 text-sm">Your guide to stress free shopping</p>
             </div>
           </div>
           
@@ -941,20 +984,36 @@ export const CartPilot: React.FC = () => {
               </CardContent>
             </Card>
             
-            {selectedStore && cartItems.length > 0 && (
-              <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl">
-                <CardContent className="p-6">
-                  <div className="flex gap-3">
-                    <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-lg font-semibold shadow-lg">
-                      🗺 Plan Optimal Route
-                    </Button>
-                    <Button className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-semibold shadow-lg">
-                      🧭 Start Shopping at {selectedStore.name}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Shopping Actions */}
+            <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl">
+              <CardContent className="p-6">
+                <div className="space-y-3">
+                  <Button 
+                    onClick={handleAddProductLocation}
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-lg font-semibold shadow-lg"
+                  >
+                    ➕ Add Product Location (+10 Points)
+                  </Button>
+                  
+                  {selectedStore && cartItems.length > 0 && (
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={handlePlanOptimalRoute}
+                        className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 rounded-lg font-semibold shadow-lg"
+                      >
+                        🗺 Plan Optimal Route
+                      </Button>
+                      <Button 
+                        onClick={handleStartShopping}
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-semibold shadow-lg"
+                      >
+                        🧭 Start Shopping at {selectedStore?.name || 'Store'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -1057,6 +1116,14 @@ export const CartPilot: React.FC = () => {
         />
       )}
       
+      {/* Add Product Location Modal */}
+      <AddProductLocation
+        isOpen={showAddProductModal}
+        selectedStore={selectedStore}
+        onClose={() => setShowAddProductModal(false)}
+        onSuccess={handleProductLocationSuccess}
+      />
+
       {/* Report Issue Button */}
       <ReportIssue 
         userEmail={user?.email} 
