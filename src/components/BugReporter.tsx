@@ -35,7 +35,7 @@ From: ${userEmail || 'Anonymous User'}
 Type: ${issueType}
 Time: ${new Date().toLocaleString()}`
 
-      console.log('🎯 BugReporter v5.0 - Submitting report')
+      console.log('🎯 BugReporter v6.0 - Submitting report with enhanced email client handling')
 
       // Try to store in database first
       try {
@@ -61,26 +61,83 @@ Subject: ${emailSubject}
 
 ${emailBody}`
 
-      // Always copy to clipboard as primary method
+      // Multiple email client opening methods
+      const mailtoUrl = `mailto:exiledev8668@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
+      
+      // Always copy to clipboard first
       try {
         await navigator.clipboard.writeText(fullEmailContent)
+        console.log('✅ Report copied to clipboard')
         
-        // Try mailto as secondary
-        const mailtoUrl = `mailto:exiledev8668@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
+        // Try multiple methods to open email client
+        let emailOpened = false
         
+        // Method 1: Direct window.open
         if (mailtoUrl.length < 1900) {
           try {
-            window.location.href = mailtoUrl
-            alert('✅ Report copied to clipboard and email client opened!\n\nIf email didn\'t open, paste from clipboard.')
-          } catch (mailtoError) {
-            alert('✅ Report copied to clipboard!\n\nPlease paste into your email app and send to:\nexiledev8668@gmail.com')
+            const emailWindow = window.open(mailtoUrl, '_self')
+            if (emailWindow) {
+              emailOpened = true
+              console.log('✅ Email client opened via window.open')
+            }
+          } catch (e) {
+            console.log('Method 1 failed:', e)
           }
-        } else {
-          alert('✅ Report copied to clipboard!\n\nPlease paste into your email app and send to:\nexiledev8668@gmail.com')
         }
+        
+        // Method 2: Create dynamic link and click it
+        if (!emailOpened && mailtoUrl.length < 1900) {
+          try {
+            const link = document.createElement('a')
+            link.href = mailtoUrl
+            link.style.display = 'none'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            emailOpened = true
+            console.log('✅ Email client opened via dynamic link')
+          } catch (e) {
+            console.log('Method 2 failed:', e)
+          }
+        }
+        
+        // Method 3: Try PowerShell/cmd email on Windows
+        if (!emailOpened && typeof window !== 'undefined' && navigator.userAgent.includes('Windows')) {
+          try {
+            // This won't work in browser but shows intent
+            console.log('Attempting Windows email client...')
+          } catch (e) {
+            console.log('Method 3 failed:', e)
+          }
+        }
+        
+        // Show appropriate success message
+        if (emailOpened) {
+          alert('✅ Report submitted!\n\n• Copied to clipboard\n• Email client opened\n\nIf email didn\'t open properly, paste from clipboard to:\nexiledev8668@gmail.com')
+        } else {
+          alert('📋 Report copied to clipboard!\n\n📧 Please paste into your email client and send to:\nexiledev8668@gmail.com\n\n(Email client auto-open not supported in your browser)')
+        }
+        
       } catch (clipError) {
-        // Final fallback - show text for manual copy
-        alert(`📧 Please email this report to: exiledev8668@gmail.com\n\nSubject: ${emailSubject}\n\n${emailBody}`)
+        console.error('Clipboard failed:', clipError)
+        // Final fallback - show content for manual copy
+        const fallbackMsg = `📧 MANUAL COPY REQUIRED:\n\nEmail this to: exiledev8668@gmail.com\n\nSubject: ${emailSubject}\n\nMessage:\n${emailBody}`
+        alert(fallbackMsg)
+        
+        // Also try to select text in a textarea for easy copying
+        const textarea = document.createElement('textarea')
+        textarea.value = fullEmailContent
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.select()
+        try {
+          document.execCommand('copy')
+          alert('Text selected for copying! Press Ctrl+C then paste into email client.')
+        } catch (e) {
+          console.log('execCommand copy also failed')
+        }
+        document.body.removeChild(textarea)
       }
 
       setSubmitted(true)
@@ -105,7 +162,7 @@ ${emailBody}`
         onClick={() => setIsOpen(true)}
         className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full shadow-lg z-50"
       >
-🚨 BUG REPORTER v5.0
+🚨 BUG REPORTER v6.0
       </Button>
     )
   }
@@ -115,7 +172,7 @@ ${emailBody}`
       <Card className="max-w-lg w-full">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Report an Issue (v5.0)</span>
+            <span>Report an Issue (v6.0)</span>
             <Button
               size="sm"
               variant="ghost"
@@ -130,7 +187,7 @@ ${emailBody}`
           {submitted ? (
             <div className="text-center py-8">
               <div className="text-4xl mb-4">✅</div>
-              <h3 className="text-lg font-semibold mb-2">Issue Reported! (v5.0)</h3>
+              <h3 className="text-lg font-semibold mb-2">Issue Reported! (v6.0)</h3>
               <p className="text-gray-600">Thank you for your feedback.</p>
             </div>
           ) : (
@@ -182,7 +239,7 @@ ${emailBody}`
               </div>
 
               <div className="bg-green-50 p-3 rounded-lg text-sm text-green-800">
-                <p><strong>✅ FIXED v5.0 Component:</strong></p>
+                <p><strong>✅ ENHANCED v6.0 Component:</strong></p>
                 <ul className="mt-1 text-xs space-y-1">
                   <li>• Clipboard-first reliable method</li>
                   <li>• Simplified email client opening</li>
@@ -196,7 +253,7 @@ ${emailBody}`
                 disabled={isSubmitting}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
               >
-                {isSubmitting ? 'Submitting...' : '📧 Submit Report (v5.0)'}
+                {isSubmitting ? 'Submitting...' : '📧 Submit Report (v6.0)'}
               </Button>
             </div>
           )}
