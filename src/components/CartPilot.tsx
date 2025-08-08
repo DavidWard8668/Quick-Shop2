@@ -11,6 +11,7 @@ import { ChangePasswordModal } from "./ChangePasswordModal";
 import LoadingSpinner from "./LoadingSpinner";
 import { ReportIssue } from "./ReportIssue";
 import { AddProductLocation } from "./AddProductLocation";
+import { UserTutorial } from "./UserTutorial";
 // TODO: Implement these components for enhanced functionality
 // import { ShoppingRouteBuilder } from "./ShoppingRouteBuilder";
 // import { SmartSuggestions } from "./SmartSuggestions";
@@ -87,6 +88,7 @@ export const CartPilot: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
   const [showAddProductModal, setShowAddProductModal] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   
   // Shopping cart state
   const [cartItems, setCartItems] = useState<{
@@ -545,6 +547,14 @@ export const CartPilot: React.FC = () => {
   useEffect(() => {
     initializeApp()
     
+    // Check if tutorial should be shown for new users
+    const tutorialCompleted = localStorage.getItem('cartpilot-tutorial-completed')
+    const tutorialSkipped = localStorage.getItem('cartpilot-tutorial-skipped')
+    
+    if (!tutorialCompleted && !tutorialSkipped) {
+      setTimeout(() => setShowTutorial(true), 2000) // Show after 2 seconds
+    }
+    
     // Detect iOS
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
     setIsIOS(isIOSDevice)
@@ -581,7 +591,17 @@ export const CartPilot: React.FC = () => {
             />
             <div>
               <h1 className="text-3xl font-bold text-white">CARTPILOT</h1>
-              <p className="text-purple-200 text-sm">Your guide to stress free shopping</p>
+              <div className="flex items-center gap-2">
+                <p className="text-purple-200 text-sm">Your guide to stress free shopping</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowTutorial(true)}
+                  className="text-purple-200 hover:text-white hover:bg-white/10 h-6 px-2 text-xs"
+                >
+                  📚 Help
+                </Button>
+              </div>
             </div>
           </div>
           
@@ -1033,6 +1053,7 @@ export const CartPilot: React.FC = () => {
                       userStats={userStats}
                       userProfile={userProfile}
                       onStatsUpdate={(stats) => setUserStats(stats)}
+                      onProfileUpdate={(profile) => setUserProfile(profile)}
                     />
                   </CardContent>
                 </Card>
@@ -1122,6 +1143,13 @@ export const CartPilot: React.FC = () => {
         selectedStore={selectedStore}
         onClose={() => setShowAddProductModal(false)}
         onSuccess={handleProductLocationSuccess}
+      />
+
+      {/* User Tutorial */}
+      <UserTutorial
+        isOpen={showTutorial}
+        onClose={() => setShowTutorial(false)}
+        onComplete={() => setShowTutorial(false)}
       />
 
       {/* Report Issue Button */}

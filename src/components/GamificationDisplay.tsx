@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import { Button } from './ui/button'
+import { ProfileImageUpload } from './ProfileImageUpload'
 
 interface UserStats {
   points: number
@@ -15,12 +17,14 @@ interface UserProfile {
   nickname?: string
   preferred_name?: string
   level?: string
+  avatar_url?: string
 }
 
 interface GamificationDisplayProps {
   userStats: UserStats | null
   userProfile: UserProfile | null
   onStatsUpdate: (stats: UserStats) => void
+  onProfileUpdate?: (profile: UserProfile) => void
   userId: string
 }
 
@@ -44,8 +48,10 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
   userStats,
   userProfile,
   onStatsUpdate,
+  onProfileUpdate,
   userId
 }) => {
+  const [showProfileImageUpload, setShowProfileImageUpload] = useState(false)
   const [leaderboard, setLeaderboard] = useState<Array<{
     user_id: string
     nickname: string
@@ -100,6 +106,16 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
   }
 
 
+  // Handle profile image update
+  const handleImageUpdate = (imageUrl: string) => {
+    if (onProfileUpdate) {
+      onProfileUpdate({
+        ...profile,
+        avatar_url: imageUrl
+      })
+    }
+  }
+
   console.log('GamificationDisplay rendering with stats:', stats)
   console.log('GamificationDisplay rendering with profile:', profile)
   
@@ -108,13 +124,42 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
       {/* User Stats Card */}
       <div className="bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold mb-1">
-              {getMembershipIcon(stats.membershipLevel || profile.level)} {getMembershipName(stats.membershipLevel || profile.level)}
-            </h2>
-            <p className="opacity-90">
-              {profile?.nickname || profile?.preferred_name || 'Pilot'}
-            </p>
+          <div className="flex items-center gap-4">
+            {/* Profile Image */}
+            <div className="relative">
+              <div 
+                className="w-16 h-16 rounded-full border-3 border-white/20 overflow-hidden cursor-pointer hover:border-white/40 transition-all"
+                onClick={() => setShowProfileImageUpload(true)}
+              >
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-white/10 flex items-center justify-center text-2xl">
+                    👤
+                  </div>
+                )}
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setShowProfileImageUpload(true)}
+                className="absolute -bottom-1 -right-1 w-6 h-6 p-0 rounded-full bg-white/20 hover:bg-white/30 text-white border-0"
+              >
+                📷
+              </Button>
+            </div>
+            
+            <div>
+              <h2 className="text-2xl font-bold mb-1">
+                {getMembershipIcon(stats.membershipLevel || profile.level)} {getMembershipName(stats.membershipLevel || profile.level)}
+              </h2>
+              <p className="opacity-90">
+                {profile?.nickname || profile?.preferred_name || 'Pilot'}
+              </p>
+            </div>
           </div>
           <div className="text-right">
             <div className="text-3xl font-bold">{stats.points}</div>
@@ -282,6 +327,15 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
           </>
         )}
       </div>
+
+      {/* Profile Image Upload Modal */}
+      <ProfileImageUpload
+        isOpen={showProfileImageUpload}
+        currentImageUrl={profile?.avatar_url}
+        userId={userId}
+        onImageUpdate={handleImageUpdate}
+        onClose={() => setShowProfileImageUpload(false)}
+      />
     </div>
   )
 }
