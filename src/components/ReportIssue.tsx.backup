@@ -12,7 +12,7 @@ interface ReportIssueProps {
 }
 
 export const ReportIssue: React.FC<ReportIssueProps> = ({ userEmail, userId }) => {
-  // Component version: v3.0 - FINAL MINIMAL EMAIL FORMAT - 2025-08-08
+  // Component version: v2.0 - Fixed minimal email format
   const [isOpen, setIsOpen] = useState(false)
   const [issueType, setIssueType] = useState<'bug' | 'feature' | 'other'>('bug')
   const [subject, setSubject] = useState('')
@@ -29,15 +29,11 @@ export const ReportIssue: React.FC<ReportIssueProps> = ({ userEmail, userId }) =
     setIsSubmitting(true)
     
     try {
-      // Create minimal email body for maximum compatibility - v3.0
+      // Create minimal email body for maximum compatibility
       const minimalBody = `${description}
 
 From: ${userEmail || 'Anonymous User'}
 Type: ${issueType}`
-
-      // DEBUG: Show what we're actually sending
-      console.log('ReportIssue v3.0 - Email body:', minimalBody)
-      console.log('ReportIssue v3.0 - Email body length:', minimalBody.length)
 
       // Try to store in database (optional) - don't include detailed page info
       try {
