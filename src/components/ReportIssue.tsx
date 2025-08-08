@@ -56,27 +56,52 @@ export const ReportIssue: React.FC<ReportIssueProps> = ({ userEmail, userId }) =
         // Continue with email - this is not critical
       }
 
-      // Create email body
-      const emailBody = `
-Issue Type: ${issueType}
-Subject: ${subject}
+      // Create simplified email body (avoid mailto length limits)
+      const emailBody = `Issue: ${subject}
+
 Description: ${description}
 
-User Info:
-- Email: ${userEmail || 'Not logged in'}
-- User ID: ${userId || 'Not logged in'}
+Type: ${issueType}
+User: ${userEmail || 'Anonymous'}
+URL: ${pageInfo.url}
+Time: ${new Date().toLocaleString()}`
 
-Page Info:
-- URL: ${pageInfo.url}
-- Timestamp: ${pageInfo.timestamp}
+      // Try mailto first, then fallback to copy-to-clipboard
+      const mailtoLink = `mailto:exiledev8668@gmail.com?subject=[CartPilot] ${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`
+      
+      // Check if mailto URL is too long (browsers have ~2000 char limit)
+      if (mailtoLink.length > 1900) {
+        // Fallback: Copy to clipboard and show instructions
+        try {
+          await navigator.clipboard.writeText(`TO: exiledev8668@gmail.com
+SUBJECT: [CartPilot] ${subject}
+
+${emailBody}
+
+Technical Details:
+- Platform: ${pageInfo.platform}  
 - Screen: ${pageInfo.screenWidth}x${pageInfo.screenHeight}
-- Platform: ${pageInfo.platform}
-- User Agent: ${pageInfo.userAgent}
-      `
+- User Agent: ${pageInfo.userAgent}`)
 
-      // Open email client
-      const mailtoLink = `mailto:exiledev8668@gmail.com?subject=[CartPilot Issue] ${subject}&body=${encodeURIComponent(emailBody)}`
-      window.open(mailtoLink)
+          alert(`📋 Report copied to clipboard!\n\nPlease paste this into a new email to exiledev8668@gmail.com`)
+        } catch (clipError) {
+          // Final fallback: show the email content in an alert
+          alert(`📧 Please email this report to: exiledev8668@gmail.com\n\nSubject: [CartPilot] ${subject}\n\n${emailBody}`)
+        }
+      } else {
+        // URL is short enough for mailto
+        const opened = window.open(mailtoLink)
+        
+        // Check if popup was blocked
+        if (!opened) {
+          try {
+            await navigator.clipboard.writeText(emailBody)
+            alert(`📧 Please email to: exiledev8668@gmail.com\n\n📋 Report details copied to clipboard!`)
+          } catch (clipError) {
+            alert(`📧 Please email this to: exiledev8668@gmail.com\n\n${emailBody}`)
+          }
+        }
+      }
 
       setSubmitted(true)
       setTimeout(() => {
@@ -177,16 +202,47 @@ Page Info:
               </div>
 
               <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
-                <p>📧 This will open your email client to send the report to our support team.</p>
+                <p><strong>📧 How it works:</strong></p>
+                <ul className="mt-1 text-xs space-y-1">
+                  <li>• Opens your email client automatically</li>
+                  <li>• If blocked, copies report to clipboard</li>
+                  <li>• You can then paste into any email app</li>
+                  <li>• Sent directly to exiledev8668@gmail.com</li>
+                </ul>
               </div>
 
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit Issue Report'}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
+                >
+                  {isSubmitting ? 'Submitting...' : '📧 Submit Report'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    const testData = `TO: exiledev8668@gmail.com
+SUBJECT: [CartPilot] Test Report
+
+This is a test report from CartPilot.
+
+Type: bug
+User: ${userEmail || 'Anonymous'}
+Time: ${new Date().toLocaleString()}`
+                    
+                    navigator.clipboard.writeText(testData).then(() => {
+                      alert('📋 Test report copied to clipboard! Paste this into any email app.')
+                    }).catch(() => {
+                      alert(`📧 Test report:\n\n${testData}`)
+                    })
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="px-3"
+                >
+                  📋 Test
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
