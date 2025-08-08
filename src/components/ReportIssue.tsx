@@ -12,6 +12,7 @@ interface ReportIssueProps {
 }
 
 export const ReportIssue: React.FC<ReportIssueProps> = ({ userEmail, userId }) => {
+  // Component version: v2.0 - Fixed minimal email format
   const [isOpen, setIsOpen] = useState(false)
   const [issueType, setIssueType] = useState<'bug' | 'feature' | 'other'>('bug')
   const [subject, setSubject] = useState('')
@@ -59,13 +60,13 @@ Type: ${issueType}`
         const clipboardText = `Email: exiledev8668@gmail.com
 Subject: [CartPilot] ${subject}
 
-${simpleBody}`
+${minimalBody}`
         
         try {
           await navigator.clipboard.writeText(clipboardText)
           alert(`📋 Report copied to clipboard!\n\nPlease paste into your email app and send to:\nexiledev8668@gmail.com`)
         } catch (clipError) {
-          alert(`📧 Please email this to: exiledev8668@gmail.com\n\nSubject: [CartPilot] ${subject}\n\n${simpleBody}`)
+          alert(`📧 Please email this to: exiledev8668@gmail.com\n\nSubject: [CartPilot] ${subject}\n\n${minimalBody}`)
         }
       } else {
         // Use window.location.href = mailtoLink instead of window.open for better compatibility
@@ -77,13 +78,13 @@ ${simpleBody}`
           const clipboardText = `Email: exiledev8668@gmail.com
 Subject: [CartPilot] ${subject}
 
-${simpleBody}`
+${minimalBody}`
           
           try {
             await navigator.clipboard.writeText(clipboardText)
             alert(`📋 Report copied to clipboard!\n\nPlease paste into your email app.`)
           } catch (clipError) {
-            alert(`📧 Please email to: exiledev8668@gmail.com\n\n${simpleBody}`)
+            alert(`📧 Please email to: exiledev8668@gmail.com\n\n${minimalBody}`)
           }
         }
       }

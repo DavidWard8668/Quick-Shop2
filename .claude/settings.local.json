@@ -14,7 +14,10 @@
       "Bash(git push:*)",
       "Bash(claude mcp add:*)",
       "Bash(npx @gongrzhe/server-gmail-autoauth-mcp auth:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(true)"
     ],
     "deny": []
   }
