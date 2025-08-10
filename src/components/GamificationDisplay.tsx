@@ -116,6 +116,28 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
     }
   }
 
+  // Handle point earning actions
+  const handleAddProductLocation = () => {
+    console.log('📍 Add Product Location clicked - navigating to product location feature')
+    // You could emit an event here or use a callback prop
+    alert('🎯 Add Product Location\n\nThis feature helps other shoppers find products!\n\nIn the full app, this would open the product location wizard where you can:\n\n• Scan product barcodes\n• Take photos of product locations\n• Add aisle and shelf information\n• Earn 10 points per contribution!')
+  }
+
+  const handleVerifyLocation = () => {
+    console.log('✅ Verify Location clicked')
+    alert('✅ Verify Product Location\n\nHelp improve accuracy by verifying product locations added by other users!\n\n• Review product locations\n• Confirm if they\'re correct\n• Earn 5 points per verification\n• Build your reputation as a trusted navigator!')
+  }
+
+  const handleUploadPhoto = () => {
+    console.log('📷 Upload Photo clicked')
+    alert('📷 Upload Product Photo\n\nAdd visual references to help other shoppers!\n\n• Take clear product photos\n• Show exact shelf locations\n• Help with visual navigation\n• Earn 15 points per photo upload!')
+  }
+
+  const handleSubmitRoute = () => {
+    console.log('🗺️ Submit Route clicked')
+    alert('🗺️ Submit Optimal Route\n\nShare your efficient shopping routes with the community!\n\n• Plan store navigation paths\n• Optimize for time and efficiency\n• Help others shop faster\n• Earn 20 points per route submission!')
+  }
+
   console.log('GamificationDisplay rendering with stats:', stats)
   console.log('GamificationDisplay rendering with profile:', profile)
   
@@ -205,7 +227,10 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h3 className="text-lg font-bold text-gray-800 mb-4">🎯 Earn More Points</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
+          <div 
+            className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+            onClick={handleAddProductLocation}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">Add Product Location</div>
@@ -214,7 +239,10 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
               <span className="text-green-600 font-bold">+10</span>
             </div>
           </div>
-          <div className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
+          <div 
+            className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+            onClick={handleVerifyLocation}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">Verify Location</div>
@@ -223,7 +251,10 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
               <span className="text-green-600 font-bold">+5</span>
             </div>
           </div>
-          <div className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
+          <div 
+            className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+            onClick={handleUploadPhoto}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">Upload Photo</div>
@@ -232,7 +263,10 @@ export const GamificationDisplay: React.FC<GamificationDisplayProps> = ({
               <span className="text-green-600 font-bold">+15</span>
             </div>
           </div>
-          <div className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
+          <div 
+            className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+            onClick={handleSubmitRoute}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">Submit Route</div>
