@@ -3,47 +3,109 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
-import { EnhancedProductSearch } from './EnhancedProductSearch'
+import { ProductSearch } from './ProductSearch'
 import { AllergenChecker } from "./AllergenChecker";
-import { GamificationDisplay } from "./GamificationDisplay";
 import { AuthModal } from "./AuthModal";
-import { ChangePasswordModal } from "./ChangePasswordModal";
 import LoadingSpinner from "./LoadingSpinner";
 import { BugReporter } from "./BugReporter";
-import { BarcodeScanner } from "./BarcodeScanner";
-import { OfflineIndicator } from "./OfflineIndicator";
-import { NotificationSettings } from "./NotificationSettings";
-import { FloorPlanViewer } from "./FloorPlanViewer";
-import { ARNavigator } from "./ARNavigator";
-import { CrowdsourceManager } from "./CrowdsourceManager";
-import { RealTimeSyncIndicator } from "./RealTimeSyncIndicator";
-import { SocialShoppingDashboard } from "./SocialShopping/SocialShoppingDashboard";
-import { AISuperIntelligenceDashboard } from "./AI/AISuperIntelligenceDashboard";
-import { APIMarketplaceDashboard } from "./Marketplace/APIMarketplaceDashboard";
-import { offlineService } from "../services/offlineService";
-import { notificationService } from "../services/notificationService";
-import { floorPlanService } from "../services/floorPlanService";
-import { arNavigationService } from "../services/arNavigationService";
-import { realTimeSyncService } from "../services/realTimeSyncService";
-import { AddProductLocation } from "./AddProductLocation";
 import { UserTutorial } from "./UserTutorial";
-import { AIStoreMapper } from "./AIStoreMapper";
 // TODO: Implement these components for enhanced functionality
 // import { ShoppingRouteBuilder } from "./ShoppingRouteBuilder";
 // import { SmartSuggestions } from "./SmartSuggestions";
 import { getCurrentUser, signOut, testSupabaseConnection, supabase } from "../supabaseClient";
 import { User } from '@supabase/supabase-js';
-import {
-  getUserProfile,
-  createUserProfile,
-  updateUserProfile,
-  addFavoriteStore,
-  removeFavoriteStore,
-  getUserFavoriteStores
-} from '../services/userProfileService'
-import { fetchNearbyStoresFromDB, getCurrentLocation, getLocationFromPostcode, StoreData, fetchAndSaveStoresFromOSM } from '../services/storeDataService'
-import { openMapsNavigation } from '../services/navigationService'
-import { awardPoints, getUserStats } from '../services/gamificationService'
+import { fetchNearbyStoresFromDB, getCurrentLocation, getLocationFromPostcode, StoreData } from '../services/storeDataService'
+
+// Mock implementations for removed advanced features
+const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    return error ? null : data
+  } catch (error) {
+    console.error('Error getting user profile:', error)
+    return null
+  }
+}
+
+const createUserProfile = async (userId: string, profileData: any): Promise<UserProfile | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .insert({ 
+        id: userId, 
+        ...profileData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+    return error ? null : data
+  } catch (error) {
+    console.error('Error creating user profile:', error)
+    return null
+  }
+}
+
+const getUserFavoriteStores = async (userId: string): Promise<{store_id: string, store?: StoreData}[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_favorite_stores')
+      .select('store_id')
+      .eq('user_id', userId)
+    return error ? [] : data || []
+  } catch (error) {
+    console.error('Error getting favorite stores:', error)
+    return []
+  }
+}
+
+const addFavoriteStore = async (userId: string, storeId: string): Promise<void> => {
+  try {
+    await supabase
+      .from('user_favorite_stores')
+      .insert({ user_id: userId, store_id: storeId })
+  } catch (error) {
+    console.error('Error adding favorite store:', error)
+  }
+}
+
+const removeFavoriteStore = async (userId: string, storeId: string): Promise<void> => {
+  try {
+    await supabase
+      .from('user_favorite_stores')
+      .delete()
+      .eq('user_id', userId)
+      .eq('store_id', storeId)
+  } catch (error) {
+    console.error('Error removing favorite store:', error)
+  }
+}
+
+const openMapsNavigation = async (destination: { lat: string, lng: string, name: string, address: string }) => {
+  const lat = parseFloat(destination.lat)
+  const lng = parseFloat(destination.lng)
+  
+  if (isNaN(lat) || isNaN(lng)) {
+    throw new Error('Invalid coordinates for navigation')
+  }
+  
+  // Try different navigation apps
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+  const appleMapsUrl = `maps://maps.google.com/maps?daddr=${lat},${lng}&amp;ll=`
+  
+  // Detect iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  
+  if (isIOS) {
+    window.open(appleMapsUrl, '_blank')
+  } else {
+    window.open(googleMapsUrl, '_blank')
+  }
+}
 
 // Using StoreData type from storeDataService instead of duplicate interface
 
@@ -67,7 +129,7 @@ interface UserProfile {
 
 export const CartPilot: React.FC = () => {
   // Core state
-  const [activeTab, setActiveTab] = useState<'stores' | 'navigate' | 'cart' | 'map' | 'pilot' | 'social' | 'ai' | 'marketplace'>('stores')
+  const [activeTab, setActiveTab] = useState<'stores' | 'navigate' | 'cart' | 'map' | 'pilot'>('stores')
   
   // Debug logging for activeTab changes
   React.useEffect(() => {
@@ -98,14 +160,6 @@ export const CartPilot: React.FC = () => {
   // Barcode scanner state
   const [isScannerOpen, setIsScannerOpen] = useState(false)
   
-  // Notification settings state
-  const [showNotificationSettings, setShowNotificationSettings] = useState(false)
-  
-  // AR navigation state
-  const [showARNavigation, setShowARNavigation] = useState(false)
-  
-  // Crowdsource manager state
-  const [showCrowdsourceManager, setShowCrowdsourceManager] = useState(false)
   
   // Store state
   const [stores, setStores] = useState<StoreData[]>([])
@@ -160,21 +214,14 @@ export const CartPilot: React.FC = () => {
     return R * c
   }
 
-  // Advanced features initialization
-  const initializeAdvancedFeatures = async () => {
+  // Basic features initialization
+  const initializeBasicFeatures = async () => {
     try {
       if (!user) return
       
-      // Award daily login bonus
-      await awardPoints(user.id, 'daily_login')
-      
-      // Get user stats
-      const stats = await getUserStats(user.id)
-      setUserStats(stats)
-      
-      console.log('✅ Advanced features initialized')
+      console.log('✅ Basic features initialized')
     } catch (error) {
-      console.error('Error initializing advanced features:', error)
+      console.error('Error initializing basic features:', error)
     }
   }
 
@@ -201,8 +248,8 @@ export const CartPilot: React.FC = () => {
         const favorites = await getUserFavoriteStores(currentUser.id)
         setFavoriteStores(favorites)
         
-        // Initialize advanced features
-        await initializeAdvancedFeatures()
+        // Initialize basic features
+        await initializeBasicFeatures()
       }
     } catch (error) {
       console.error('Error loading user data:', error)
@@ -217,20 +264,11 @@ export const CartPilot: React.FC = () => {
       // Get stores from database with larger radius for rural areas
       const foundStores = await fetchNearbyStoresFromDB(latitude, longitude, 25) // 25 mile radius
       
-      // If no stores found, automatically fetch from OpenStreetMap
+      // If no stores found in database, show message to user
       if (foundStores.length === 0) {
-        console.log('🌍 No stores in database, fetching fresh data from OpenStreetMap...')
-        const freshStores = await fetchAndSaveStoresFromOSM(latitude, longitude)
-        
-        if (freshStores.length > 0) {
-          console.log(`✅ Fetched ${freshStores.length} fresh stores from OpenStreetMap`)
-          setStores(freshStores)
-          return
-        } else {
-          console.log('❌ No stores found from OpenStreetMap either')
-          setStores([])
-          return
-        }
+        console.log('🌍 No stores found in database')
+        setStores([])
+        return
       }
       
       // Calculate distances and filter to only truly nearby stores
@@ -437,11 +475,6 @@ export const CartPilot: React.FC = () => {
       }
       
       await openMapsNavigation(destination)
-      
-      // Award points for navigation
-      if (user) {
-        await awardPoints(user.id, 'navigation_started')
-      }
     } catch (error) {
       console.error('Error opening navigation:', error)
       alert('Unable to open navigation. Please check your device settings.')
@@ -461,21 +494,14 @@ export const CartPilot: React.FC = () => {
   // Handle product location success
   const handleProductLocationSuccess = async (productData: any) => {
     try {
-      // Award points for contributing product location
-      await awardPoints(user.id, 'product_location_added', 10)
-      
-      alert(`Thanks for adding "${productData.name}" in "Aisle ${productData.location.aisle} - ${productData.location.section}"! You earned 10 points! 🎉`)
-      
-      // Refresh user stats
-      const stats = await getUserStats(user.id)
-      setUserStats(stats)
+      alert(`Thanks for adding "${productData.name}" in "Aisle ${productData.location.aisle} - ${productData.location.section}"!`)
       
       // TODO: Save to database
       console.log('Product location data:', productData)
       
     } catch (error) {
       console.error('Error adding product location:', error)
-      alert('Thanks for the contribution! (Note: Points system temporarily unavailable)')
+      alert('Thanks for the contribution!')
     }
   }
 
@@ -494,26 +520,9 @@ export const CartPilot: React.FC = () => {
     setPlannedRoute(routeItems)
     setRouteGenerated(true)
     setActiveTab('map') // Switch to map tab to show the route
-    
-    // Real-time sync route
-    if (user && selectedStore) {
-      realTimeSyncService.syncRouteGenerated(routeItems, user.id, selectedStore.id).catch(console.error)
-    }
-    
-    // Send notification for route ready
-    if (notificationService.getSettings().enabled) {
-      notificationService.notifyRouteReady(routeItems.length, selectedStore.name)
-    }
-    
-    // Award points for using route planning
-    if (user) {
-      awardPoints(user.id, 'route_planned').then(() => {
-        getUserStats(user.id).then(stats => setUserStats(stats))
-      }).catch(console.error)
-    }
   }
 
-  // Handle barcode scanning with offline support
+  // Handle barcode scanning
   const handleBarcodeScanned = async (barcode: string, productInfo: any) => {
     console.log('📱 Barcode scanned:', barcode, productInfo)
     
@@ -522,49 +531,13 @@ export const CartPilot: React.FC = () => {
       id: Date.now().toString(),
       name: productInfo.name || 'Scanned Product',
       completed: false,
-      category: productInfo.category || 'Scanned Item',
-      brand: productInfo.brand
+      addedAt: new Date().toISOString()
     }
     
     setCartItems(prev => [...prev, newItem])
     setIsScannerOpen(false)
     
-    // Cache cart items offline
-    try {
-      await offlineService.cacheCartItems([...cartItems, newItem])
-      
-      // If offline, add to sync queue
-      if (!offlineService.isOnline()) {
-        await offlineService.addOfflineCartItem(newItem)
-        console.log('📦 Added to offline queue for sync')
-      }
-    } catch (error) {
-      console.error('Failed to cache cart item:', error)
-    }
-    
-    // Award points for barcode scanning
-    if (user && offlineService.isOnline()) {
-      awardPoints(user.id, 'barcode_scan').then(() => {
-        getUserStats(user.id).then(stats => setUserStats(stats))
-      }).catch(console.error)
-    } else if (user) {
-      // Add points to sync queue for offline
-      await offlineService.addToSyncQueue('points', {
-        userId: user.id,
-        action: 'barcode_scan',
-        points: 5
-      })
-    }
-    
-    // Schedule cart reminder notification (1 hour)
-    if (notificationService.getSettings().reminders) {
-      const currentCart = [...cartItems, newItem].map(item => item.name)
-      notificationService.scheduleCartReminder(currentCart, 3600000) // 1 hour
-    }
-    
-    // Show success message with offline indicator
-    const offlineText = offlineService.isOnline() ? '' : ' (Offline - will sync later)'
-    alert(`✅ Added "${newItem.name}" to your cart!${offlineText}`)
+    alert(`✅ Added "${newItem.name}" to your cart!`)
   }
 
   // Handle start shopping
@@ -574,13 +547,6 @@ export const CartPilot: React.FC = () => {
     const confirmStart = confirm(`Ready to start shopping at ${selectedStore.name}?\n\nYour ${cartItems.length} items are ready!\n\nTip: Use the checkboxes to mark items as you find them.`)
     
     if (confirmStart) {
-      // Award points for starting shopping
-      if (user) {
-        awardPoints(user.id, 'shopping_started').then(() => {
-          getUserStats(user.id).then(stats => setUserStats(stats))
-        }).catch(console.error)
-      }
-      
       alert('🛒 Happy shopping! Mark off items as you find them. CartPilot is here to help! 🎉')
     }
   }
@@ -599,26 +565,14 @@ export const CartPilot: React.FC = () => {
   // Handle store mapping completion
   const handleStoreMappingComplete = async (mappingData: any) => {
     try {
-      // Award significant points for store mapping
-      await awardPoints(user.id, 'store_mapping_complete', 50)
-      
-      // Bonus for high accuracy
-      if (mappingData.confidence_score > 0.85) {
-        await awardPoints(user.id, 'high_accuracy_mapping', 25)
-      }
-      
-      alert(`🎉 Store mapping complete! You earned ${mappingData.confidence_score > 0.85 ? '75' : '50'} points!\n\nThank you for helping build the most accurate store maps!`)
-      
-      // Refresh user stats
-      const stats = await getUserStats(user.id)
-      setUserStats(stats)
+      alert(`🎉 Store mapping complete!\n\nThank you for helping build the most accurate store maps!`)
       
       // TODO: Save mapping data to database
       console.log('Store mapping data:', mappingData)
       
     } catch (error) {
       console.error('Error processing store mapping:', error)
-      alert('Thanks for the mapping contribution! (Note: Points system temporarily unavailable)')
+      alert('Thanks for the mapping contribution!')
     }
   }
 
@@ -657,11 +611,6 @@ export const CartPilot: React.FC = () => {
       const updatedItems = [...cartItems, newItem]
       setCartItems(updatedItems)
       setItemInput('')
-
-      // Real-time sync
-      if (user) {
-        realTimeSyncService.syncCartUpdate(updatedItems, user.id).catch(console.error)
-      }
     }
   }
 
@@ -669,11 +618,6 @@ export const CartPilot: React.FC = () => {
   const handleRemoveItem = (itemId: string) => {
     const updatedItems = cartItems.filter(item => item.id !== itemId)
     setCartItems(updatedItems)
-
-    // Real-time sync
-    if (user) {
-      realTimeSyncService.syncCartUpdate(updatedItems, user.id).catch(console.error)
-    }
   }
 
   // Handle toggling item completion
@@ -682,11 +626,6 @@ export const CartPilot: React.FC = () => {
       item.id === itemId ? { ...item, completed: !item.completed } : item
     )
     setCartItems(updatedItems)
-
-    // Real-time sync
-    if (user) {
-      realTimeSyncService.syncCartUpdate(updatedItems, user.id).catch(console.error)
-    }
   }
 
 
@@ -866,39 +805,6 @@ export const CartPilot: React.FC = () => {
             👨‍✈️ Pilot
             {user && <Badge className="bg-orange-500 text-white ml-1">Premium</Badge>}
           </Button>
-          <Button
-            onClick={() => setActiveTab('social')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
-              activeTab === 'social' 
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
-                : 'bg-white/20 hover:bg-white/30 text-white border border-white/30'
-            }`}
-          >
-            👥 Social
-            <Badge className="bg-purple-500 text-white ml-1">NEW</Badge>
-          </Button>
-          <Button
-            onClick={() => setActiveTab('ai')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
-              activeTab === 'ai' 
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
-                : 'bg-white/20 hover:bg-white/30 text-white border border-white/30'
-            }`}
-          >
-            🧠 AI
-            <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 text-white ml-1">NEXT-GEN</Badge>
-          </Button>
-          <Button
-            onClick={() => setActiveTab('marketplace')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
-              activeTab === 'marketplace' 
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
-                : 'bg-white/20 hover:bg-white/30 text-white border border-white/30'
-            }`}
-          >
-            🌐 Marketplace
-            <Badge className="bg-gradient-to-r from-gold-500 to-orange-500 text-white ml-1">ECOSYSTEM</Badge>
-          </Button>
         </div>
 
         {/* Tab Content */}
@@ -1039,7 +945,7 @@ export const CartPilot: React.FC = () => {
                             onClick={() => handleAIStoreMapping(store)}
                             className="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 rounded-lg font-semibold shadow-lg text-sm"
                           >
-                            🤖 AI Map Store (+50 Points)
+                            🤖 AI Map Store
                           </Button>
                         </div>
                       </CardContent>
@@ -1081,7 +987,7 @@ export const CartPilot: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                <EnhancedProductSearch 
+                <ProductSearch 
                   selectedStore={selectedStore}
                   onAddToCart={(product) => handleAddItem(product.name)}
                   cartItems={cartItems}
@@ -1103,7 +1009,7 @@ export const CartPilot: React.FC = () => {
                       onClick={() => setIsScannerOpen(true)}
                       className="w-full bg-white text-blue-600 hover:bg-gray-100 py-3 rounded-lg font-semibold shadow-lg transition-all"
                     >
-                      📷 Open Barcode Scanner (+5 Points)
+                      📷 Open Barcode Scanner
                     </Button>
                   </CardContent>
                 </Card>
@@ -1114,14 +1020,7 @@ export const CartPilot: React.FC = () => {
                       onClick={handleAddProductLocation}
                       className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-lg font-semibold shadow-lg"
                     >
-                      ➕ Add Product Location (+10 Points)
-                    </Button>
-                    
-                    <Button 
-                      onClick={() => setShowCrowdsourceManager(true)}
-                      className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white py-3 rounded-lg font-semibold shadow-lg"
-                    >
-                      👥 Community Mapping (+5 Points)
+                      ➕ Add Product Location
                     </Button>
                   </CardContent>
                 </Card>
@@ -1255,7 +1154,7 @@ export const CartPilot: React.FC = () => {
                     onClick={handleAddProductLocation}
                     className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-lg font-semibold shadow-lg"
                   >
-                    ➕ Add Product Location (+10 Points)
+                    ➕ Add Product Location
                   </Button>
                   
                   {selectedStore && cartItems.length > 0 && (
@@ -1290,14 +1189,6 @@ export const CartPilot: React.FC = () => {
                       <span className="flex items-center gap-2">
                         👨‍✈️ CartPilot Premium Dashboard
                       </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setShowNotificationSettings(true)}
-                        className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                      >
-                        🔔 Notifications
-                      </Button>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1331,30 +1222,6 @@ export const CartPilot: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'social' && (
-          <div className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-            <SocialShoppingDashboard 
-              userId={user?.id || 'guest'} 
-              familyId={userProfile?.family_id}
-            />
-          </div>
-        )}
-
-        {activeTab === 'ai' && (
-          <div className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-            <AISuperIntelligenceDashboard 
-              userId={user?.id || 'guest'}
-            />
-          </div>
-        )}
-
-        {activeTab === 'marketplace' && (
-          <div className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-            <APIMarketplaceDashboard 
-              userId={user?.id || 'guest'}
-            />
-          </div>
-        )}
 
         {activeTab === 'map' && (
           <div className="space-y-6">
@@ -1400,26 +1267,7 @@ export const CartPilot: React.FC = () => {
               </Card>
             ) : (
               <div className="space-y-6">
-                {/* Real Floor Plan Viewer */}
-                {selectedStore && (
-                  <FloorPlanViewer
-                    storeId={selectedStore.id}
-                    storeName={selectedStore.name}
-                    cartItems={cartItems}
-                    onRouteGenerated={(route) => {
-                      // Update planned route with real floor plan data
-                      const updatedRoute = route.map(item => ({
-                        name: item.item,
-                        aisle: item.aisle.number,
-                        section: item.section.name,
-                        completed: false
-                      }))
-                      setPlannedRoute(updatedRoute)
-                    }}
-                  />
-                )}
-
-                {/* Route Overview Card - Fallback/Summary */}
+                {/* Route Overview Card */}
                 <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl">
                   <CardHeader>
                     <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-between">
@@ -1554,29 +1402,11 @@ export const CartPilot: React.FC = () => {
                       <div className="space-y-3 pt-4 border-t">
                         <div className="flex gap-3">
                           <Button
-                            onClick={() => setShowARNavigation(true)}
+                            onClick={() => alert('AR Navigation coming soon! Use the route checklist above to navigate through the store.')}
                             disabled={plannedRoute.length === 0}
                             className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                           >
-                            🥽 AR Navigation
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              // Voice-only navigation
-                              const instructions = arNavigationService.generateARInstructions()
-                              if (instructions.length > 0 && 'speechSynthesis' in window) {
-                                const utterance = new SpeechSynthesisUtterance(
-                                  `Starting voice navigation. ${instructions[0]}`
-                                )
-                                speechSynthesis.speak(utterance)
-                              } else {
-                                alert('🎤 Voice navigation ready! Generate a route first.')
-                              }
-                            }}
-                            variant="outline"
-                            className="px-6"
-                          >
-                            🎤 Voice
+                            🥽 AR Navigation (Coming Soon)
                           </Button>
                         </div>
                         
@@ -1707,44 +1537,6 @@ export const CartPilot: React.FC = () => {
         userId={user?.id}
       />
 
-      {/* Notification Settings Modal */}
-      <NotificationSettings
-        isOpen={showNotificationSettings}
-        onClose={() => setShowNotificationSettings(false)}
-      />
-
-      {/* AR Navigator */}
-      <ARNavigator
-        isOpen={showARNavigation}
-        onClose={() => setShowARNavigation(false)}
-        storeId={selectedStore?.id || ''}
-        storeName={selectedStore?.name || ''}
-        route={plannedRoute.map(item => ({
-          name: item.name,
-          aisle: item.aisle,
-          section: item.section,
-          x: Math.random() * 100, // Mock coordinates
-          y: Math.random() * 100
-        }))}
-      />
-
-      {/* Crowdsource Manager */}
-      <CrowdsourceManager
-        isOpen={showCrowdsourceManager}
-        onClose={() => setShowCrowdsourceManager(false)}
-        storeId={selectedStore?.id || ''}
-        storeName={selectedStore?.name || ''}
-        userId={user?.id}
-        userEmail={user?.email}
-      />
-
-      {/* Offline Status Indicator */}
-      <OfflineIndicator 
-        onSyncNow={() => offlineService.syncWhenOnline()}
-      />
-
-      {/* Real-time Sync Indicator */}
-      <RealTimeSyncIndicator />
     </div>
   )
 }
