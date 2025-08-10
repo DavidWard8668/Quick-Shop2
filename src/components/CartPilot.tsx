@@ -9,6 +9,11 @@ import { AuthModal } from "./AuthModal";
 import LoadingSpinner from "./LoadingSpinner";
 import { BugReporter } from "./BugReporter";
 import { UserTutorial } from "./UserTutorial";
+import { AddProductLocation } from "./AddProductLocation";
+import { AIStoreMapper } from "./AIStoreMapper";
+import { BarcodeScanner } from "./BarcodeScanner";
+import { ChangePasswordModal } from "./ChangePasswordModal";
+import { GamificationDisplay } from "./GamificationDisplay";
 // TODO: Implement these components for enhanced functionality
 // import { ShoppingRouteBuilder } from "./ShoppingRouteBuilder";
 // import { SmartSuggestions } from "./SmartSuggestions";
