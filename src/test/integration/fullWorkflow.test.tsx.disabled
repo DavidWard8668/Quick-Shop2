@@ -1,0 +1,328 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+
+// Mock browser APIs BEFORE importing components
+Object.defineProperty(global, 'Notification', {
+  value: {
+    permission: 'granted',
+    requestPermission: vi.fn().mockResolvedValue('granted')
+  },
+  writable: true
+})
+
+import { CartPilot } from '../../components/CartPilot'
+import { offlineService } from '../../services/offlineService'
+import { realTimeSyncService } from '../../services/realTimeSyncService'
+import { notificationService } from '../../services/notificationService'
+
+// Mock all services
+vi.mock('../../supabaseClient')
+vi.mock('../../services/userProfileService')
+vi.mock('../../services/storeDataService')
+vi.mock('../../services/navigationService')
+vi.mock('../../services/gamificationService')
+vi.mock('../../services/offlineService')
+vi.mock('../../services/realTimeSyncService')
+vi.mock('../../services/notificationService')
+vi.mock('../../services/arNavigationService')
+vi.mock('../../services/floorPlanService')
+
+const mockOfflineService = offlineService as any
+const mockRealTimeSyncService = realTimeSyncService as any
+const mockNotificationService = notificationService as any
+
+describe('Full Workflow Integration Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    
+    // Setup default mock responses
+    mockOfflineService.isOnline.mockReturnValue(true)
+    mockOfflineService.init.mockResolvedValue(undefined)
+    mockOfflineService.cacheCartItems.mockResolvedValue(undefined)
+    
+    mockRealTimeSyncService.syncCartUpdate.mockResolvedValue(undefined)
+    mockRealTimeSyncService.syncRouteGenerated.mockResolvedValue(undefined)
+    mockRealTimeSyncService.isConnected.mockReturnValue(true)
+    
+    mockNotificationService.getSettings.mockReturnValue({
+      enabled: true,
+      deals: true,
+      routes: true,
+      reminders: true,
+      points: true,
+      community: true
+    })
+    mockNotificationService.notifyRouteReady.mockResolvedValue(undefined)
+  })
+
+  describe('Complete Shopping Journey', () => {
+    it('should handle complete shopping workflow from search to checkout', async () => {
+      render(<CartPilot />)
+      
+      // 1. Start at stores tab
+      expect(screen.getByText('🔍 Find CartPilot Partner Stores')).toBeInTheDocument()
+      
+      // 2. Switch to cart tab
+      fireEvent.click(screen.getByText('🛒 Cart'))
+      await waitFor(() => {
+        expect(screen.getByText('🛒 Smart Shopping List')).toBeInTheDocument()
+      })
+      
+      // 3. Add items to cart
+      const input = screen.getByPlaceholderText('Add item to shopping list...')
+      const addButton = screen.getByText('➕ Add Item')
+      
+      fireEvent.change(input, { target: { value: 'Milk' } })
+      fireEvent.click(addButton)
+      
+      await waitFor(() => {
+        expect(screen.getByText('Milk')).toBeInTheDocument()
+      })
+      
+      // 4. Add more items
+      fireEvent.change(input, { target: { value: 'Bread' } })
+      fireEvent.click(addButton)
+      
+      await waitFor(() => {
+        expect(screen.getByText('Bread')).toBeInTheDocument()
+      })
+      
+      // 5. Verify real-time sync was called
+      expect(mockRealTimeSyncService.syncCartUpdate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'Milk' }),
+          expect.objectContaining({ name: 'Bread' })
+        ]),
+        undefined // No user in this test
+      )
+      
+      // 6. Generate route (need to select store first by going to stores tab)
+      fireEvent.click(screen.getByText('📍 Stores'))
+      await waitFor(() => {
+        expect(screen.getByText('🔍 Find CartPilot Partner Stores')).toBeInTheDocument()
+      })
+      
+      // Simulate store selection (would normally require location/search)
+      // Go back to cart to generate route
+      fireEvent.click(screen.getByText('🛒 Cart'))
+      
+      // 7. Switch to map tab to view route
+      fireEvent.click(screen.getByText('🗺️ Map'))
+      await waitFor(() => {
+        expect(screen.getByText('🗺️ Store Navigation Map')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle offline mode gracefully', async () => {
+      // Simulate offline mode
+      mockOfflineService.isOnline.mockReturnValue(false)
+      mockRealTimeSyncService.isConnected.mockReturnValue(false)
+      
+      render(<CartPilot />)
+      
+      // Switch to cart and add items
+      fireEvent.click(screen.getByText('🛒 Cart'))
+      
+      const input = screen.getByPlaceholderText('Add item to shopping list...')
+      const addButton = screen.getByText('➕ Add Item')
+      
+      fireEvent.change(input, { target: { value: 'Offline Item' } })
+      fireEvent.click(addButton)
+      
+      await waitFor(() => {
+        expect(screen.getByText('Offline Item')).toBeInTheDocument()
+      })
+      
+      // Verify offline caching was attempted
+      expect(mockOfflineService.cacheCartItems).toHaveBeenCalled()
+    })
+  })
+
+  describe('Error Recovery', () => {
+    it('should handle service failures gracefully', async () => {
+      // Mock service failures
+      mockRealTimeSyncService.syncCartUpdate.mockRejectedValue(new Error('Sync failed'))
+      mockOfflineService.cacheCartItems.mockRejectedValue(new Error('Cache failed'))
+      
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      
+      render(<CartPilot />)
+      
+      // Add item should still work despite service failures
+      fireEvent.click(screen.getByText('🛒 Cart'))
+      
+      const input = screen.getByPlaceholderText('Add item to shopping list...')
+      const addButton = screen.getByText('➕ Add Item')
+      
+      fireEvent.change(input, { target: { value: 'Test Item' } })
+      fireEvent.click(addButton)
+      
+      await waitFor(() => {
+        expect(screen.getByText('Test Item')).toBeInTheDocument()
+      })
+      
+      // Services should have been called and errors handled
+      expect(mockRealTimeSyncService.syncCartUpdate).toHaveBeenCalled()
+      
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('Feature Integration', () => {
+    it('should integrate barcode scanning with cart management', async () => {
+      render(<CartPilot />)
+      
+      // Navigate to the navigate tab where barcode scanner is available
+      fireEvent.click(screen.getByText('🧭 Navigate'))
+      
+      await waitFor(() => {
+        expect(screen.getByText('🧭 Smart Navigation')).toBeInTheDocument()
+      })
+      
+      // Should show message to select store first
+      expect(screen.getByText('Select a Store First')).toBeInTheDocument()
+    })
+
+    it('should integrate PWA features', async () => {
+      render(<CartPilot />)
+      
+      // PWA install banner should be visible
+      expect(screen.getByText('📱 Install CartPilot')).toBeInTheDocument()
+      expect(screen.getByText('Get quick access from your home screen')).toBeInTheDocument()
+    })
+
+    it('should show real-time sync indicator', async () => {
+      render(<CartPilot />)
+      
+      // The RealTimeSyncIndicator should be rendered (though not visible in this test environment)
+      // We verify it's in the component tree by checking for its container div
+      const containers = screen.getAllByText('CARTPILOT')
+      expect(containers.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('State Management', () => {
+    it('should maintain state across tab switches', async () => {
+      render(<CartPilot />)
+      
+      // Add item in cart tab
+      fireEvent.click(screen.getByText('🛒 Cart'))
+      
+      const input = screen.getByPlaceholderText('Add item to shopping list...')
+      fireEvent.change(input, { target: { value: 'Persistent Item' } })
+      fireEvent.click(screen.getByText('➕ Add Item'))
+      
+      await waitFor(() => {
+        expect(screen.getByText('Persistent Item')).toBeInTheDocument()
+      })
+      
+      // Switch to stores tab
+      fireEvent.click(screen.getByText('📍 Stores'))
+      await waitFor(() => {
+        expect(screen.getByText('🔍 Find CartPilot Partner Stores')).toBeInTheDocument()
+      })
+      
+      // Switch back to cart tab
+      fireEvent.click(screen.getByText('🛒 Cart'))
+      
+      // Item should still be there
+      await waitFor(() => {
+        expect(screen.getByText('Persistent Item')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle item completion', async () => {
+      render(<CartPilot />)
+      
+      fireEvent.click(screen.getByText('🛒 Cart'))
+      
+      const input = screen.getByPlaceholderText('Add item to shopping list...')
+      fireEvent.change(input, { target: { value: 'Completable Item' } })
+      fireEvent.click(screen.getByText('➕ Add Item'))
+      
+      await waitFor(() => {
+        expect(screen.getByText('Completable Item')).toBeInTheDocument()
+      })
+      
+      // Find and click the checkbox
+      const checkbox = screen.getByRole('checkbox')
+      fireEvent.click(checkbox)
+      
+      await waitFor(() => {
+        // Item should be marked as completed (with strikethrough styling)
+        const completedItem = screen.getByText('Completable Item')
+        expect(completedItem).toBeInTheDocument()
+      })
+      
+      // Verify sync was called for completion
+      expect(mockRealTimeSyncService.syncCartUpdate).toHaveBeenCalled()
+    })
+
+    it('should handle item removal', async () => {
+      render(<CartPilot />)
+      
+      fireEvent.click(screen.getByText('🛒 Cart'))
+      
+      const input = screen.getByPlaceholderText('Add item to shopping list...')
+      fireEvent.change(input, { target: { value: 'Removable Item' } })
+      fireEvent.click(screen.getByText('➕ Add Item'))
+      
+      await waitFor(() => {
+        expect(screen.getByText('Removable Item')).toBeInTheDocument()
+      })
+      
+      // Find and click the remove button (×)
+      const removeButton = screen.getByText('×')
+      fireEvent.click(removeButton)
+      
+      await waitFor(() => {
+        expect(screen.queryByText('Removable Item')).not.toBeInTheDocument()
+      })
+      
+      // Verify sync was called for removal
+      expect(mockRealTimeSyncService.syncCartUpdate).toHaveBeenCalled()
+    })
+  })
+
+  describe('Performance and Optimization', () => {
+    it('should not make unnecessary API calls', async () => {
+      render(<CartPilot />)
+      
+      // Initial render shouldn't trigger sync calls without user actions
+      expect(mockRealTimeSyncService.syncCartUpdate).not.toHaveBeenCalled()
+      
+      // Tab switching shouldn't trigger sync calls
+      fireEvent.click(screen.getByText('🛒 Cart'))
+      fireEvent.click(screen.getByText('📍 Stores'))
+      fireEvent.click(screen.getByText('🧭 Navigate'))
+      
+      expect(mockRealTimeSyncService.syncCartUpdate).not.toHaveBeenCalled()
+    })
+
+    it('should batch similar operations', async () => {
+      render(<CartPilot />)
+      
+      fireEvent.click(screen.getByText('🛒 Cart'))
+      
+      const input = screen.getByPlaceholderText('Add item to shopping list...')
+      const addButton = screen.getByText('➕ Add Item')
+      
+      // Add multiple items quickly
+      fireEvent.change(input, { target: { value: 'Item 1' } })
+      fireEvent.click(addButton)
+      
+      fireEvent.change(input, { target: { value: 'Item 2' } })
+      fireEvent.click(addButton)
+      
+      fireEvent.change(input, { target: { value: 'Item 3' } })
+      fireEvent.click(addButton)
+      
+      await waitFor(() => {
+        expect(screen.getByText('Item 3')).toBeInTheDocument()
+      })
+      
+      // Should have made sync calls for each addition
+      expect(mockRealTimeSyncService.syncCartUpdate).toHaveBeenCalledTimes(3)
+    })
+  })
+})

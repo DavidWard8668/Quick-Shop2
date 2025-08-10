@@ -123,8 +123,13 @@ test.describe('Store Search and Selection', () => {
         await expect(storeCard.locator('button:has-text("🛒 Shop Here")')).toBeVisible();
         await expect(storeCard.locator('button:has-text("🤖 AI Map Store")')).toBeVisible();
         
-        // Check for favorite button
-        await expect(storeCard.locator('button').filter({ hasText: /[🤍❤️]/ })).toBeVisible();
+        // Check for favorite button (heart or white heart)
+        const favoriteButton = storeCard.locator('button').filter({ hasText: /🤍|❤️/u }).or(
+          storeCard.locator('button[title*="favorite"]').or(
+            storeCard.locator('button[aria-label*="favorite"]')
+          )
+        );
+        await expect(favoriteButton).toBeVisible();
         
         console.log('✅ Store information displayed correctly');
       } else {
@@ -245,7 +250,9 @@ test.describe('Store Search and Selection', () => {
       const storesFound = await page.locator('[data-testid="store-card"]').count();
       
       if (storesFound > 0) {
-        const favoriteButton = page.locator('[data-testid="store-card"]').first().locator('button').filter({ hasText: /[🤍❤️]/ });
+        const favoriteButton = page.locator('[data-testid="store-card"]').first().locator('button').filter({ hasText: /🤍|❤️/u }).or(
+          page.locator('[data-testid="store-card"]').first().locator('button[title*="favorite"]')
+        );
         
         // Click favorite button (should work without login or show auth modal)
         await favoriteButton.click();

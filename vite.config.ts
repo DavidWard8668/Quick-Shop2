@@ -5,15 +5,15 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0', // Allow external connections
-    port: 8080,      // Match your working port
-    strictPort: true, // Don't fallback to other ports
+    port: 5173,      // Use standard Vite port
+    strictPort: false, // Allow fallback to other ports
     hmr: {
-      port: 8080,
+      port: 5173,
       host: 'localhost'
     }
   },
   preview: {
     host: '0.0.0.0',
-    port: 8080
+    port: 5173
   }
 })

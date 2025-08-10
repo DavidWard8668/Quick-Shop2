@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CartPilot - Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .features {
+            text-align: left;
+            margin: 30px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+        }
+        
+        .features h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .features ul {
+            list-style: none;
+            space-y: 10px;
+        }
+        
+        .features li {
+            margin-bottom: 10px;
+            padding-left: 30px;
+            position: relative;
+            font-size: 1rem;
+        }
+        
+        .features li::before {
+            content: "✅";
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+        
+        .retry-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            margin: 10px;
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .app-btn {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            margin: 10px;
+        }
+        
+        .app-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .icon {
+                font-size: 60px;
+            }
+            
+            p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🛒</div>
+        <h1>CartPilot</h1>
+        <p>You're currently offline, but CartPilot still works!</p>
+        
+        <div class="features">
+            <h3>📱 Available Offline:</h3>
+            <ul>
+                <li>View and edit your shopping list</li>
+                <li>Scan product barcodes</li>
+                <li>Access cached store layouts</li>
+                <li>View your route maps</li>
+                <li>Browse saved product locations</li>
+                <li>Check your points and achievements</li>
+            </ul>
+        </div>
+        
+        <div>
+            <button class="retry-btn" onclick="tryReconnect()">
+                🌐 Try Again
+            </button>
+            <button class="app-btn" onclick="openApp()">
+                📱 Open CartPilot
+            </button>
+        </div>
+        
+        <div class="status" id="status">
+            <strong>Connection Status:</strong> <span id="connection-status">Offline</span>
+            <br>
+            <small>Your data will sync automatically when you're back online</small>
+        </div>
+    </div>
+
+    <script>
+        // Check online status
+        function updateConnectionStatus() {
+            const status = navigator.onLine ? 'Online' : 'Offline';
+            const statusColor = navigator.onLine ? '#10b981' : '#ef4444';
+            
+            document.getElementById('connection-status').textContent = status;
+            document.getElementById('connection-status').style.color = statusColor;
+            
+            if (navigator.onLine) {
+                document.querySelector('.status small').textContent = 'Connection restored! Syncing your data...';
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            }
+        }
+        
+        function tryReconnect() {
+            if (navigator.onLine) {
+                window.location.href = '/';
+            } else {
+                // Show trying message
+                const btn = document.querySelector('.retry-btn');
+                btn.textContent = '🔄 Checking...';
+                btn.disabled = true;
+                
+                setTimeout(() => {
+                    updateConnectionStatus();
+                    btn.textContent = '🌐 Try Again';
+                    btn.disabled = false;
+                }, 1000);
+            }
+        }
+        
+        function openApp() {
+            window.location.href = '/';
+        }
+        
+        // Listen for online/offline events
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        
+        // Initial status check
+        updateConnectionStatus();
+        
+        // Auto-retry when online
+        let retryInterval;
+        if (!navigator.onLine) {
+            retryInterval = setInterval(() => {
+                if (navigator.onLine) {
+                    clearInterval(retryInterval);
+                    updateConnectionStatus();
+                }
+            }, 5000);
+        }
+        
+        // Service Worker update check
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data.type === 'SYNC_COMPLETE') {
+                    const notification = document.createElement('div');
+                    notification.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: #10b981;
+                        color: white;
+                        padding: 15px 20px;
+                        border-radius: 10px;
+                        font-weight: bold;
+                        z-index: 1000;
+                        animation: slideIn 0.5s ease;
+                    `;
+                    notification.textContent = '✅ Data synced successfully!';
+                    document.body.appendChild(notification);
+                    
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 3000);
+                }
+            });
+        }
+        
+        // Add slide animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

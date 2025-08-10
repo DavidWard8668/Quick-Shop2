@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+
+// Mock browser APIs BEFORE importing components
+Object.defineProperty(global, 'Notification', {
+  value: {
+    permission: 'granted',
+    requestPermission: vi.fn().mockResolvedValue('granted')
+  },
+  writable: true
+})
+
 import { CartPilot } from '../../components/CartPilot'
 
 // Mock the services

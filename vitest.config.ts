@@ -14,7 +14,9 @@ export default defineConfig({
       'cartpilot-testing/**',
       'ios/**',
       'android/**',
-      'dist/**'
+      'dist/**',
+      'tests/**/*.e2e.ts',
+      'tests/**/*.spec.ts'
     ],
     coverage: {
       provider: 'v8',
