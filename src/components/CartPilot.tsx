@@ -11,6 +11,20 @@ import { ChangePasswordModal } from "./ChangePasswordModal";
 import LoadingSpinner from "./LoadingSpinner";
 import { BugReporter } from "./BugReporter";
 import { BarcodeScanner } from "./BarcodeScanner";
+import { OfflineIndicator } from "./OfflineIndicator";
+import { NotificationSettings } from "./NotificationSettings";
+import { FloorPlanViewer } from "./FloorPlanViewer";
+import { ARNavigator } from "./ARNavigator";
+import { CrowdsourceManager } from "./CrowdsourceManager";
+import { RealTimeSyncIndicator } from "./RealTimeSyncIndicator";
+import { SocialShoppingDashboard } from "./SocialShopping/SocialShoppingDashboard";
+import { AISuperIntelligenceDashboard } from "./AI/AISuperIntelligenceDashboard";
+import { APIMarketplaceDashboard } from "./Marketplace/APIMarketplaceDashboard";
+import { offlineService } from "../services/offlineService";
+import { notificationService } from "../services/notificationService";
+import { floorPlanService } from "../services/floorPlanService";
+import { arNavigationService } from "../services/arNavigationService";
+import { realTimeSyncService } from "../services/realTimeSyncService";
 import { AddProductLocation } from "./AddProductLocation";
 import { UserTutorial } from "./UserTutorial";
 import { AIStoreMapper } from "./AIStoreMapper";
@@ -53,7 +67,12 @@ interface UserProfile {
 
 export const CartPilot: React.FC = () => {
   // Core state
-  const [activeTab, setActiveTab] = useState<'stores' | 'navigate' | 'cart' | 'map' | 'pilot'>('stores')
+  const [activeTab, setActiveTab] = useState<'stores' | 'navigate' | 'cart' | 'map' | 'pilot' | 'social' | 'ai' | 'marketplace'>('stores')
+  
+  // Debug logging for activeTab changes
+  React.useEffect(() => {
+    console.log('🔄 activeTab changed to:', activeTab)
+  }, [activeTab])
   const [user, setUser] = useState<User | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [userStats, setUserStats] = useState<{
@@ -78,6 +97,15 @@ export const CartPilot: React.FC = () => {
   
   // Barcode scanner state
   const [isScannerOpen, setIsScannerOpen] = useState(false)
+  
+  // Notification settings state
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false)
+  
+  // AR navigation state
+  const [showARNavigation, setShowARNavigation] = useState(false)
+  
+  // Crowdsource manager state
+  const [showCrowdsourceManager, setShowCrowdsourceManager] = useState(false)
   
   // Store state
   const [stores, setStores] = useState<StoreData[]>([])
@@ -467,6 +495,16 @@ export const CartPilot: React.FC = () => {
     setRouteGenerated(true)
     setActiveTab('map') // Switch to map tab to show the route
     
+    // Real-time sync route
+    if (user && selectedStore) {
+      realTimeSyncService.syncRouteGenerated(routeItems, user.id, selectedStore.id).catch(console.error)
+    }
+    
+    // Send notification for route ready
+    if (notificationService.getSettings().enabled) {
+      notificationService.notifyRouteReady(routeItems.length, selectedStore.name)
+    }
+    
     // Award points for using route planning
     if (user) {
       awardPoints(user.id, 'route_planned').then(() => {
@@ -475,8 +513,8 @@ export const CartPilot: React.FC = () => {
     }
   }
 
-  // Handle barcode scanning
-  const handleBarcodeScanned = (barcode: string, productInfo: any) => {
+  // Handle barcode scanning with offline support
+  const handleBarcodeScanned = async (barcode: string, productInfo: any) => {
     console.log('📱 Barcode scanned:', barcode, productInfo)
     
     // Add scanned product to cart
@@ -491,15 +529,42 @@ export const CartPilot: React.FC = () => {
     setCartItems(prev => [...prev, newItem])
     setIsScannerOpen(false)
     
+    // Cache cart items offline
+    try {
+      await offlineService.cacheCartItems([...cartItems, newItem])
+      
+      // If offline, add to sync queue
+      if (!offlineService.isOnline()) {
+        await offlineService.addOfflineCartItem(newItem)
+        console.log('📦 Added to offline queue for sync')
+      }
+    } catch (error) {
+      console.error('Failed to cache cart item:', error)
+    }
+    
     // Award points for barcode scanning
-    if (user) {
+    if (user && offlineService.isOnline()) {
       awardPoints(user.id, 'barcode_scan').then(() => {
         getUserStats(user.id).then(stats => setUserStats(stats))
       }).catch(console.error)
+    } else if (user) {
+      // Add points to sync queue for offline
+      await offlineService.addToSyncQueue('points', {
+        userId: user.id,
+        action: 'barcode_scan',
+        points: 5
+      })
     }
     
-    // Show success message
-    alert(`✅ Added "${newItem.name}" to your cart!`)
+    // Schedule cart reminder notification (1 hour)
+    if (notificationService.getSettings().reminders) {
+      const currentCart = [...cartItems, newItem].map(item => item.name)
+      notificationService.scheduleCartReminder(currentCart, 3600000) // 1 hour
+    }
+    
+    // Show success message with offline indicator
+    const offlineText = offlineService.isOnline() ? '' : ' (Offline - will sync later)'
+    alert(`✅ Added "${newItem.name}" to your cart!${offlineText}`)
   }
 
   // Handle start shopping
@@ -589,21 +654,39 @@ export const CartPilot: React.FC = () => {
         completed: false,
         addedAt: new Date().toISOString()
       }
-      setCartItems(prev => [...prev, newItem])
+      const updatedItems = [...cartItems, newItem]
+      setCartItems(updatedItems)
       setItemInput('')
+
+      // Real-time sync
+      if (user) {
+        realTimeSyncService.syncCartUpdate(updatedItems, user.id).catch(console.error)
+      }
     }
   }
 
   // Handle removing items from cart
   const handleRemoveItem = (itemId: string) => {
-    setCartItems(prev => prev.filter(item => item.id !== itemId))
+    const updatedItems = cartItems.filter(item => item.id !== itemId)
+    setCartItems(updatedItems)
+
+    // Real-time sync
+    if (user) {
+      realTimeSyncService.syncCartUpdate(updatedItems, user.id).catch(console.error)
+    }
   }
 
   // Handle toggling item completion
   const handleToggleItem = (itemId: string) => {
-    setCartItems(prev => prev.map(item => 
+    const updatedItems = cartItems.map(item => 
       item.id === itemId ? { ...item, completed: !item.completed } : item
-    ))
+    )
+    setCartItems(updatedItems)
+
+    // Real-time sync
+    if (user) {
+      realTimeSyncService.syncCartUpdate(updatedItems, user.id).catch(console.error)
+    }
   }
 
 
@@ -625,13 +708,14 @@ export const CartPilot: React.FC = () => {
   useEffect(() => {
     initializeApp()
     
-    // Check if tutorial should be shown for new users
-    const tutorialCompleted = localStorage.getItem('cartpilot-tutorial-completed')
-    const tutorialSkipped = localStorage.getItem('cartpilot-tutorial-skipped')
-    
-    if (!tutorialCompleted && !tutorialSkipped) {
-      setTimeout(() => setShowTutorial(true), 2000) // Show after 2 seconds
-    }
+    // DISABLED: Auto-showing tutorial causes issues on Android
+    // Users can manually open tutorial via Help button
+    // const tutorialCompleted = localStorage.getItem('cartpilot-tutorial-completed')
+    // const tutorialSkipped = localStorage.getItem('cartpilot-tutorial-skipped')
+    // 
+    // if (!tutorialCompleted && !tutorialSkipped) {
+    //   setTimeout(() => setShowTutorial(true), 2000) // Show after 2 seconds
+    // }
     
     // Detect iOS
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
@@ -722,7 +806,7 @@ export const CartPilot: React.FC = () => {
 
 
         {/* Navigation Tabs */}
-        <div className="flex justify-center gap-3 mb-8">
+        <div className="flex justify-center gap-2 mb-8 overflow-x-auto">
           <Button
             onClick={() => setActiveTab('stores')}
             className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
@@ -781,6 +865,39 @@ export const CartPilot: React.FC = () => {
           >
             👨‍✈️ Pilot
             {user && <Badge className="bg-orange-500 text-white ml-1">Premium</Badge>}
+          </Button>
+          <Button
+            onClick={() => setActiveTab('social')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+              activeTab === 'social' 
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
+                : 'bg-white/20 hover:bg-white/30 text-white border border-white/30'
+            }`}
+          >
+            👥 Social
+            <Badge className="bg-purple-500 text-white ml-1">NEW</Badge>
+          </Button>
+          <Button
+            onClick={() => setActiveTab('ai')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+              activeTab === 'ai' 
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
+                : 'bg-white/20 hover:bg-white/30 text-white border border-white/30'
+            }`}
+          >
+            🧠 AI
+            <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 text-white ml-1">NEXT-GEN</Badge>
+          </Button>
+          <Button
+            onClick={() => setActiveTab('marketplace')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+              activeTab === 'marketplace' 
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
+                : 'bg-white/20 hover:bg-white/30 text-white border border-white/30'
+            }`}
+          >
+            🌐 Marketplace
+            <Badge className="bg-gradient-to-r from-gold-500 to-orange-500 text-white ml-1">ECOSYSTEM</Badge>
           </Button>
         </div>
 
@@ -992,12 +1109,19 @@ export const CartPilot: React.FC = () => {
                 </Card>
 
                 <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl">
-                  <CardContent className="p-6">
+                  <CardContent className="p-6 space-y-3">
                     <Button 
                       onClick={handleAddProductLocation}
                       className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-lg font-semibold shadow-lg"
                     >
                       ➕ Add Product Location (+10 Points)
+                    </Button>
+                    
+                    <Button 
+                      onClick={() => setShowCrowdsourceManager(true)}
+                      className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white py-3 rounded-lg font-semibold shadow-lg"
+                    >
+                      👥 Community Mapping (+5 Points)
                     </Button>
                   </CardContent>
                 </Card>
@@ -1162,8 +1286,18 @@ export const CartPilot: React.FC = () => {
               <div className="space-y-6">
                 <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl">
                   <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                      👨‍✈️ CartPilot Premium Dashboard
+                    <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        👨‍✈️ CartPilot Premium Dashboard
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowNotificationSettings(true)}
+                        className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                      >
+                        🔔 Notifications
+                      </Button>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1194,6 +1328,31 @@ export const CartPilot: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+          </div>
+        )}
+
+        {activeTab === 'social' && (
+          <div className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl p-6">
+            <SocialShoppingDashboard 
+              userId={user?.id || 'guest'} 
+              familyId={userProfile?.family_id}
+            />
+          </div>
+        )}
+
+        {activeTab === 'ai' && (
+          <div className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl p-6">
+            <AISuperIntelligenceDashboard 
+              userId={user?.id || 'guest'}
+            />
+          </div>
+        )}
+
+        {activeTab === 'marketplace' && (
+          <div className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl p-6">
+            <APIMarketplaceDashboard 
+              userId={user?.id || 'guest'}
+            />
           </div>
         )}
 
@@ -1241,7 +1400,26 @@ export const CartPilot: React.FC = () => {
               </Card>
             ) : (
               <div className="space-y-6">
-                {/* Route Overview Card */}
+                {/* Real Floor Plan Viewer */}
+                {selectedStore && (
+                  <FloorPlanViewer
+                    storeId={selectedStore.id}
+                    storeName={selectedStore.name}
+                    cartItems={cartItems}
+                    onRouteGenerated={(route) => {
+                      // Update planned route with real floor plan data
+                      const updatedRoute = route.map(item => ({
+                        name: item.item,
+                        aisle: item.aisle.number,
+                        section: item.section.name,
+                        completed: false
+                      }))
+                      setPlannedRoute(updatedRoute)
+                    }}
+                  />
+                )}
+
+                {/* Route Overview Card - Fallback/Summary */}
                 <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl">
                   <CardHeader>
                     <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-between">
@@ -1373,27 +1551,57 @@ export const CartPilot: React.FC = () => {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex gap-3 pt-4 border-t">
-                        <Button
-                          onClick={() => {
-                            setPlannedRoute(prev => prev.map(item => ({ ...item, completed: true })))
-                          }}
-                          variant="outline"
-                          className="flex-1"
-                        >
-                          ✅ Mark All Complete
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            setPlannedRoute([])
-                            setRouteGenerated(false)
-                            setActiveTab('cart')
-                          }}
-                          variant="outline"
-                          className="flex-1"
-                        >
-                          🔄 New Route
-                        </Button>
+                      <div className="space-y-3 pt-4 border-t">
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => setShowARNavigation(true)}
+                            disabled={plannedRoute.length === 0}
+                            className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                          >
+                            🥽 AR Navigation
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              // Voice-only navigation
+                              const instructions = arNavigationService.generateARInstructions()
+                              if (instructions.length > 0 && 'speechSynthesis' in window) {
+                                const utterance = new SpeechSynthesisUtterance(
+                                  `Starting voice navigation. ${instructions[0]}`
+                                )
+                                speechSynthesis.speak(utterance)
+                              } else {
+                                alert('🎤 Voice navigation ready! Generate a route first.')
+                              }
+                            }}
+                            variant="outline"
+                            className="px-6"
+                          >
+                            🎤 Voice
+                          </Button>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => {
+                              setPlannedRoute(prev => prev.map(item => ({ ...item, completed: true })))
+                            }}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            ✅ Mark All Complete
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setPlannedRoute([])
+                              setRouteGenerated(false)
+                              setActiveTab('cart')
+                            }}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            🔄 New Route
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -1498,6 +1706,45 @@ export const CartPilot: React.FC = () => {
         userEmail={user?.email} 
         userId={user?.id}
       />
+
+      {/* Notification Settings Modal */}
+      <NotificationSettings
+        isOpen={showNotificationSettings}
+        onClose={() => setShowNotificationSettings(false)}
+      />
+
+      {/* AR Navigator */}
+      <ARNavigator
+        isOpen={showARNavigation}
+        onClose={() => setShowARNavigation(false)}
+        storeId={selectedStore?.id || ''}
+        storeName={selectedStore?.name || ''}
+        route={plannedRoute.map(item => ({
+          name: item.name,
+          aisle: item.aisle,
+          section: item.section,
+          x: Math.random() * 100, // Mock coordinates
+          y: Math.random() * 100
+        }))}
+      />
+
+      {/* Crowdsource Manager */}
+      <CrowdsourceManager
+        isOpen={showCrowdsourceManager}
+        onClose={() => setShowCrowdsourceManager(false)}
+        storeId={selectedStore?.id || ''}
+        storeName={selectedStore?.name || ''}
+        userId={user?.id}
+        userEmail={user?.email}
+      />
+
+      {/* Offline Status Indicator */}
+      <OfflineIndicator 
+        onSyncNow={() => offlineService.syncWhenOnline()}
+      />
+
+      {/* Real-time Sync Indicator */}
+      <RealTimeSyncIndicator />
     </div>
   )
 }

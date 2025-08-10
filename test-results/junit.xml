@@ -1,0 +1,45 @@
+<testsuites id="" name="" tests="1" failures="1" skipped="0" errors="0" time="20.855372">
+<testsuite name="cart-button-monitor.e2e.ts" timestamp="2025-08-10T11:38:14.912Z" hostname="chromium" tests="1" failures="1" skipped="0" time="17.682" errors="0">
+<testcase name="Monitor Cart button click behavior with detailed logging" classname="cart-button-monitor.e2e.ts" time="17.682">
+<failure message="cart-button-monitor.e2e.ts:3:1 Monitor Cart button click behavior with detailed logging" type="FAILURE">
+<![CDATA[  [chromium] › cart-button-monitor.e2e.ts:3:1 › Monitor Cart button click behavior with detailed logging 
+
+    TimeoutError: page.waitForSelector: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('button:has-text("🏪 Stores")') to be visible
+        - waiting for" http://localhost:5175/" navigation to finish...
+        - navigated to "http://localhost:5175/"
+
+
+       6 |   
+       7 |   // Wait for the app to load - look for the navigation buttons
+    >  8 |   await page.waitForSelector('button:has-text("🏪 Stores")', { timeout: 10000 })
+         |              ^
+       9 |   
+      10 |   // Add console listener to capture React state changes
+      11 |   page.on('console', msg => {
+        at C:\Users\David\Apps\Quick-Shop\tests\e2e\cart-button-monitor.e2e.ts:8:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\cart-button-monitor.e2e.ts-4ebb1-avior-with-detailed-logging-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\..\test-results\cart-button-monitor.e2e.ts-4ebb1-avior-with-detailed-logging-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\cart-button-monitor.e2e.ts-4ebb1-avior-with-detailed-logging-chromium\error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|cart-button-monitor.e2e.ts-4ebb1-avior-with-detailed-logging-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|cart-button-monitor.e2e.ts-4ebb1-avior-with-detailed-logging-chromium\video.webm]]
+
+[[ATTACHMENT|cart-button-monitor.e2e.ts-4ebb1-avior-with-detailed-logging-chromium\error-context.md]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

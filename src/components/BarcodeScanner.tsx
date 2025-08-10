@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { BrowserMultiFormatReader, NotFoundException, ChecksumException, FormatException } from '@zxing/library'
+import { offlineService } from '../services/offlineService'
 
 interface ProductInfo {
   name: string
@@ -37,18 +38,38 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
   const scanningRef = useRef<boolean>(false)
 
-  // Product lookup function using multiple APIs
+  // Product lookup function using multiple APIs with offline support
   const lookupProduct = async (barcode: string): Promise<ProductInfo> => {
     setIsLookingUp(true)
     
     try {
+      // Check offline cache first
+      const cachedProduct = await offlineService.getCachedProduct(barcode)
+      if (cachedProduct) {
+        console.log('📦 Using cached product:', cachedProduct.name)
+        return cachedProduct
+      }
+
+      // If offline, return basic info
+      if (!offlineService.isOnline()) {
+        const offlineProduct = {
+          name: `Product ${barcode.slice(-4)}`,
+          barcode: barcode,
+          brand: 'Unknown (Offline)',
+          category: 'Scanned Offline',
+          description: 'Added while offline - will sync details when online'
+        }
+        await offlineService.cacheProduct(offlineProduct)
+        return offlineProduct
+      }
+
       // Try OpenFoodFacts API first (free, comprehensive)
       const offResponse = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
       if (offResponse.ok) {
         const offData = await offResponse.json()
         if (offData.status === 1 && offData.product) {
           const product = offData.product
-          return {
+          const productInfo = {
             name: product.product_name || product.product_name_en || 'Unknown Product',
             brand: product.brands,
             category: product.categories,
@@ -57,6 +78,10 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
             barcode: barcode,
             price: undefined // OpenFoodFacts doesn't have price info
           }
+          
+          // Cache for offline use
+          await offlineService.cacheProduct(productInfo)
+          return productInfo
         }
       }
 
@@ -67,7 +92,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
           const upcData = await upcResponse.json()
           if (upcData.items && upcData.items.length > 0) {
             const item = upcData.items[0]
-            return {
+            const productInfo = {
               name: item.title || 'Unknown Product',
               brand: item.brand,
               category: item.category,
@@ -76,26 +101,36 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
               barcode: barcode,
               price: undefined
             }
+            
+            // Cache for offline use
+            await offlineService.cacheProduct(productInfo)
+            return productInfo
           }
         }
       } catch (upcError) {
         console.log('UPC API failed, using fallback')
       }
 
-      // Final fallback - return basic info
-      return {
+      // Final fallback - return basic info and cache it
+      const fallbackProduct = {
         name: 'Product Found',
         barcode: barcode,
         brand: 'Unknown Brand',
         category: 'Scanned Product'
       }
+      
+      await offlineService.cacheProduct(fallbackProduct)
+      return fallbackProduct
     } catch (error) {
       console.error('Product lookup failed:', error)
-      return {
+      const errorProduct = {
         name: 'Scanned Product',
         barcode: barcode,
         brand: 'Unknown'
       }
+      
+      await offlineService.cacheProduct(errorProduct)
+      return errorProduct
     } finally {
       setIsLookingUp(false)
     }

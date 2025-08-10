@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -158,6 +158,26 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
   const [currentStep, setCurrentStep] = useState(1)
   const [showQuickStart, setShowQuickStart] = useState(true)
 
+  // Add keyboard escape handler for better accessibility
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        handleSkip()
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscapeKey)
+      // Prevent body scrolling when modal is open
+      document.body.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey)
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen])
+
   const handleNext = () => {
     if (currentStep < TUTORIAL_STEPS.length) {
       setCurrentStep(currentStep + 1)
@@ -173,27 +193,76 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
   }
 
   const handleComplete = () => {
-    localStorage.setItem('cartpilot-tutorial-completed', 'true')
-    if (onComplete) onComplete()
+    try {
+      localStorage.setItem('cartpilot-tutorial-completed', 'true')
+    } catch (error) {
+      console.warn('Could not save tutorial completion state:', error)
+    }
+    if (onComplete) {
+      onComplete()
+    } else {
+      // Fallback: force close by hiding the modal
+      const modal = document.querySelector('[data-tutorial-modal]')
+      if (modal) {
+        (modal as HTMLElement).style.display = 'none'
+      }
+    }
   }
 
   const handleSkip = () => {
-    localStorage.setItem('cartpilot-tutorial-skipped', 'true')
-    if (onClose) onClose()
+    try {
+      localStorage.setItem('cartpilot-tutorial-skipped', 'true')
+    } catch (error) {
+      console.warn('Could not save tutorial skip state:', error)
+    }
+    if (onClose) {
+      onClose()
+    } else {
+      // Fallback: force close by hiding the modal
+      const modal = document.querySelector('[data-tutorial-modal]')
+      if (modal) {
+        (modal as HTMLElement).style.display = 'none'
+      }
+    }
   }
 
   if (!isOpen) return null
 
   if (showQuickStart) {
     return (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-        <Card className="max-w-2xl w-full">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-2xl">
-              <span>🛒 Welcome to CartPilot!</span>
-              <Button size="sm" variant="ghost" onClick={onClose}>✕</Button>
-            </CardTitle>
-          </CardHeader>
+      <div 
+        className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto"
+        data-tutorial-modal="true"
+        onClick={(e) => {
+          // Close if clicking the backdrop
+          if (e.target === e.currentTarget) {
+            handleSkip()
+          }
+        }}
+        onTouchEnd={(e) => {
+          // Ensure touch events work on mobile
+          if (e.target === e.currentTarget) {
+            handleSkip()
+          }
+        }}
+      >
+        <div className="w-full max-w-2xl my-8">
+          <Card className="w-full">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center justify-between text-xl sm:text-2xl">
+                <span>🛒 Welcome to CartPilot!</span>
+                <Button 
+                  size="lg" 
+                  variant="ghost" 
+                  onClick={handleSkip}
+                  className="text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  aria-label="Close tutorial"
+                  title="Close tutorial (Escape key also works)"
+                >
+                  ✕
+                </Button>
+              </CardTitle>
+            </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center">
               <div className="text-6xl mb-4">🎯</div>
@@ -237,23 +306,29 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
               </ul>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button 
                 onClick={() => setShowQuickStart(false)}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white min-h-[48px] text-lg"
               >
                 📚 Take Full Tutorial
               </Button>
               <Button 
                 onClick={handleSkip}
                 variant="outline"
-                className="flex-1"
+                className="flex-1 min-h-[48px] text-lg font-medium"
               >
                 🚀 Start Shopping Now
               </Button>
             </div>
+
+            {/* Mobile-friendly tap to dismiss */}
+            <div className="text-center text-sm text-gray-500 mt-2">
+              Tap outside to close or use ✕ button above
+            </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     )
   }
@@ -261,8 +336,24 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
   const step = TUTORIAL_STEPS[currentStep - 1]
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <Card className="max-w-2xl w-full">
+    <div 
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto"
+      data-tutorial-modal="true"
+      onClick={(e) => {
+        // Close if clicking the backdrop
+        if (e.target === e.currentTarget) {
+          handleSkip()
+        }
+      }}
+      onTouchEnd={(e) => {
+        // Ensure touch events work on mobile
+        if (e.target === e.currentTarget) {
+          handleSkip()
+        }
+      }}
+    >
+      <div className="w-full max-w-2xl my-8">
+        <Card className="w-full">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
@@ -273,7 +364,16 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
               <Badge variant="outline">
                 Step {currentStep} of {TUTORIAL_STEPS.length}
               </Badge>
-              <Button size="sm" variant="ghost" onClick={onClose}>✕</Button>
+              <Button 
+                size="lg" 
+                variant="ghost" 
+                onClick={handleSkip}
+                className="text-2xl min-w-[44px] min-h-[44px] flex items-center justify-center"
+                aria-label="Close tutorial"
+                title="Close tutorial (Escape key also works)"
+              >
+                ✕
+              </Button>
             </div>
           </CardTitle>
         </CardHeader>
@@ -310,33 +410,40 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
             </div>
           )}
 
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
             <Button 
               onClick={handlePrevious}
               variant="outline"
               disabled={currentStep === 1}
+              className="w-full sm:w-auto min-h-[44px]"
             >
               ← Previous
             </Button>
             
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Button 
                 onClick={handleSkip}
                 variant="ghost"
-                size="sm"
+                className="w-full sm:w-auto min-h-[44px]"
               >
                 Skip Tutorial
               </Button>
               <Button 
                 onClick={handleNext}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white w-full sm:w-auto min-h-[44px]"
               >
                 {currentStep === TUTORIAL_STEPS.length ? '🎉 Complete' : 'Next →'}
               </Button>
             </div>
           </div>
+
+          {/* Mobile-friendly tap to dismiss */}
+          <div className="text-center text-sm text-gray-500 mt-2 sm:hidden">
+            Tap outside to close or use ✕ button above
+          </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }
