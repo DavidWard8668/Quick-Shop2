@@ -17,14 +17,44 @@ export interface NotificationPayload {
 class NotificationService {
   private registration: ServiceWorkerRegistration | null = null
   private permission: NotificationPermission = 'default'
+  private settings: {
+    enabled: boolean
+    reminders: boolean
+    deals: boolean
+    points: boolean
+    routes: boolean
+    community: boolean
+  } = {
+    enabled: true,
+    reminders: true,
+    deals: true,
+    points: true,
+    routes: true,
+    community: true
+  }
 
   constructor() {
     // Safe access to Notification API with fallback
     this.permission = (typeof Notification !== 'undefined' ? Notification.permission : 'denied') as NotificationPermission
+    this.loadSettings()
     this.init()
   }
 
+  private loadSettings(): void {
+    try {
+      const savedSettings = localStorage.getItem('cartpilot-notifications')
+      if (savedSettings) {
+        this.settings = { ...this.settings, ...JSON.parse(savedSettings) }
+      }
+    } catch (error) {
+      console.error('Failed to load notification settings:', error)
+    }
+  }
+
   async init(): Promise<void> {
+    // Load settings from localStorage
+    this.loadSettings()
+    
     if ('serviceWorker' in navigator) {
       try {
         this.registration = await navigator.serviceWorker.ready
@@ -36,19 +66,19 @@ class NotificationService {
   }
 
   // Request notification permission
-  async requestPermission(): Promise<boolean> {
+  async requestPermission(): Promise<string> {
     if (!('Notification' in window)) {
       console.log('This browser does not support notifications')
-      return false
+      return 'denied'
     }
 
     if (this.permission === 'granted') {
-      return true
+      return 'granted'
     }
 
     if (this.permission === 'denied') {
       console.log('Notification permission denied')
-      return false
+      return 'denied'
     }
 
     const permission = await Notification.requestPermission()
@@ -56,18 +86,29 @@ class NotificationService {
 
     if (permission === 'granted') {
       console.log('✅ Notification permission granted')
-      return true
+      return 'granted'
     } else {
       console.log('❌ Notification permission denied')
-      return false
+      return 'denied'
     }
   }
 
   // Show local notification
   async showNotification(payload: NotificationPayload): Promise<void> {
+    // Check if notifications are enabled in settings
+    if (!this.settings.enabled) {
+      console.log('🔕 Notifications disabled')
+      return
+    }
+
+    if (this.permission === 'denied') {
+      console.log('❌ Notification permission denied')
+      return
+    }
+
     if (this.permission !== 'granted') {
-      const granted = await this.requestPermission()
-      if (!granted) return
+      const permission = await this.requestPermission()
+      if (permission !== 'granted') return
     }
 
     const options: NotificationOptions = {
@@ -82,15 +123,22 @@ class NotificationService {
       requireInteraction: true
     }
 
-    if (this.registration && 'showNotification' in this.registration) {
-      // Use service worker for better reliability
-      await this.registration.showNotification(payload.title, options)
-    } else {
-      // Fallback to basic notification
-      new Notification(payload.title, options)
-    }
+    try {
+      if (this.registration && 'showNotification' in this.registration) {
+        // Use service worker for better reliability
+        await this.registration.showNotification(payload.title, options)
+      } else if ('Notification' in window) {
+        // Fallback to basic notification
+        new Notification(payload.title, options)
+      } else {
+        console.error('❌ Service worker not available for notifications')
+        return
+      }
 
-    console.log('🔔 Notification sent:', payload.title)
+      console.log('🔔 Notification sent:', payload.title)
+    } catch (error) {
+      console.error('❌ Failed to show notification:', error)
+    }
   }
 
   // Smart shopping notifications
@@ -106,6 +154,63 @@ class NotificationService {
         { action: 'view-cart', title: '👀 View Cart' },
         { action: 'dismiss', title: '❌ Dismiss' }
       ]
+    })
+  }
+
+  // Add specific notification methods that tests expect
+  async notifyDeal(product: string, store: string): Promise<void> {
+    if (!this.settings.deals) {
+      console.log('🔕 Deal notifications disabled')
+      return
+    }
+
+    await this.showNotification({
+      title: '🏷️ Deal Alert!',
+      body: `${product} at ${store}`,
+      tag: 'deal-alert',
+      data: { type: 'deal', product, store }
+    })
+  }
+
+  async notifyRoute(route: string): Promise<void> {
+    if (!this.settings.routes) {
+      console.log('🔕 Route notifications disabled')
+      return
+    }
+
+    await this.showNotification({
+      title: '🗺️ Route Optimized!',
+      body: route,
+      tag: 'route-optimization',
+      data: { type: 'route' }
+    })
+  }
+
+  async notifyReminder(reminder: string): Promise<void> {
+    if (!this.settings.reminders) {
+      console.log('🔕 Reminder notifications disabled')
+      return
+    }
+
+    await this.showNotification({
+      title: '⏰ Shopping Reminder',
+      body: reminder,
+      tag: 'shopping-reminder',
+      data: { type: 'reminder' }
+    })
+  }
+
+  async notifyPoints(points: number, action: string): Promise<void> {
+    if (!this.settings.points) {
+      console.log('🔕 Points notifications disabled')
+      return
+    }
+
+    await this.showNotification({
+      title: '⭐ Points Earned!',
+      body: `You earned ${points} points for ${action}!`,
+      tag: 'points-earned',
+      data: { type: 'points', points, action }
     })
   }
 
@@ -192,6 +297,47 @@ class NotificationService {
     })
   }
 
+  // Additional notification methods for tests
+  async notifyNearStore(storeName: string, distance: number): Promise<void> {
+    await this.showNotification({
+      title: '🏪 Store Nearby!',
+      body: `You're ${distance} miles from ${storeName}. Ready to shop?`,
+      tag: 'store-nearby',
+      data: { type: 'store-nearby', storeName, distance },
+      actions: [
+        { action: 'start-shopping', title: '🛒 Start Shopping' },
+        { action: 'dismiss', title: '❌ Not Now' }
+      ]
+    })
+  }
+
+  async notifyItemAvailable(product: string, store: string): Promise<void> {
+    await this.showNotification({
+      title: '📦 Item Available!',
+      body: `${product} is now available at ${store}`,
+      tag: 'item-available',
+      data: { type: 'item-available', product, store },
+      actions: [
+        { action: 'add-to-cart', title: '➕ Add to Cart' },
+        { action: 'view-details', title: '👁️ View Details' }
+      ]
+    })
+  }
+
+  async notifyCommunityUpdate(update: string, points: number): Promise<void> {
+    if (!this.settings.community) {
+      console.log('🔕 Community notifications disabled')
+      return
+    }
+
+    await this.showNotification({
+      title: '👥 Community Update',
+      body: `${update} (+${points} points)`,
+      tag: 'community-update',
+      data: { type: 'community-update', update, points }
+    })
+  }
+
   // Scheduled notifications
   async scheduleShoppingReminder(delay: number): Promise<void> {
     setTimeout(() => {
@@ -200,11 +346,14 @@ class NotificationService {
   }
 
   async scheduleCartReminder(items: string[], delay: number = 3600000): Promise<void> {
+    // Ensure minimum delay of 0
+    const safeDelay = Math.max(0, delay)
+    
     setTimeout(() => {
       if (items.length > 0) {
         this.notifyForgottenItems(items)
       }
-    }, delay) // Default 1 hour
+    }, safeDelay) // Default 1 hour
   }
 
   // Handle notification clicks
@@ -246,30 +395,27 @@ class NotificationService {
     reminders: boolean
     deals: boolean
     points: boolean
+    routes: boolean
+    community: boolean
   } {
-    const settings = localStorage.getItem('cartpilot-notifications')
-    const defaults = {
+    return {
       permission: this.permission,
-      enabled: this.permission === 'granted',
-      reminders: true,
-      deals: true,
-      points: true
+      ...this.settings
     }
-
-    return settings ? { ...defaults, ...JSON.parse(settings) } : defaults
   }
 
   // Update notification settings
-  updateSettings(settings: Partial<{
+  async updateSettings(settings: Partial<{
     enabled: boolean
     reminders: boolean
     deals: boolean
     points: boolean
-  }>): void {
-    const current = this.getSettings()
-    const updated = { ...current, ...settings }
-    localStorage.setItem('cartpilot-notifications', JSON.stringify(updated))
-    console.log('🔔 Notification settings updated:', updated)
+    routes: boolean
+    community: boolean
+  }>): Promise<void> {
+    this.settings = { ...this.settings, ...settings }
+    localStorage.setItem('cartpilot-notifications', JSON.stringify(this.settings))
+    console.log('🔔 Notification settings updated:', this.settings)
   }
 
   // Clear all notifications with specific tag
