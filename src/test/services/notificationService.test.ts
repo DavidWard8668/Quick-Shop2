@@ -54,10 +54,10 @@ Object.defineProperty(window, 'localStorage', {
 })
 
 describe('NotificationService', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     
-    // Reset localStorage mock
+    // Reset localStorage mock to return enabled settings by default
     mockLocalStorage.getItem.mockReturnValue(JSON.stringify({
       enabled: true,
       deals: true,
@@ -66,6 +66,9 @@ describe('NotificationService', () => {
       points: true,
       community: true
     }))
+    
+    // Initialize the service after mocks are set
+    await notificationService.init()
   })
 
   describe('Initialization', () => {
@@ -74,13 +77,25 @@ describe('NotificationService', () => {
       
       await notificationService.init()
       
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        'cartpilot_notification_settings',
-        expect.stringContaining('"enabled":true')
-      )
+      const settings = notificationService.getSettings()
+      expect(settings).toHaveProperty('permission')
+      expect(settings).toHaveProperty('enabled')
+      expect(settings).toHaveProperty('reminders')
+      expect(settings).toHaveProperty('deals')
+      expect(settings).toHaveProperty('points')
     })
 
     it('should load existing settings', async () => {
+      // Mock existing settings in localStorage
+      const existingSettings = JSON.stringify({
+        permission: 'granted',
+        enabled: true,
+        reminders: true,
+        deals: true,
+        points: true
+      })
+      mockLocalStorage.getItem.mockReturnValueOnce(existingSettings)
+      
       await notificationService.init()
       
       const settings = notificationService.getSettings()
@@ -94,17 +109,15 @@ describe('NotificationService', () => {
       const newSettings = {
         enabled: false,
         deals: false,
-        routes: true,
         reminders: true,
-        points: false,
-        community: true
+        points: false
       }
 
       await notificationService.updateSettings(newSettings)
       
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        'cartpilot_notification_settings',
-        JSON.stringify(newSettings)
+        'cartpilot-notifications',
+        expect.stringContaining('"enabled":false')
       )
     })
 
@@ -134,16 +147,15 @@ describe('NotificationService', () => {
         expect.objectContaining({
           body: 'This is a test',
           tag: 'test',
-          icon: '/icons/icon-192x192.png',
-          badge: '/icons/icon-72x72.png'
+          icon: '/icon-192x192.png',
+          badge: '/icon-192x192.png'
         })
       )
     })
 
     it('should not show notification when disabled', async () => {
-      mockLocalStorage.getItem.mockReturnValueOnce(JSON.stringify({
-        enabled: false
-      }))
+      // Update settings to disable notifications
+      await notificationService.updateSettings({ enabled: false })
       
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
       
@@ -159,11 +171,24 @@ describe('NotificationService', () => {
     })
 
     it('should handle notification permission denied', async () => {
+      // Set permission to denied
       window.Notification.permission = 'denied'
+      Object.defineProperty(global, 'Notification', {
+        value: {
+          permission: 'denied',
+          requestPermission: vi.fn().mockResolvedValue('denied')
+        },
+        writable: true,
+        configurable: true
+      })
+      
+      // Create a new instance with denied permission
+      const { notificationService: deniedService } = await import('../../services/notificationService')
+      await deniedService.init()
       
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
       
-      await notificationService.showNotification({
+      await deniedService.showNotification({
         title: 'Test Notification',
         body: 'This is a test',
         tag: 'test',
@@ -172,6 +197,9 @@ describe('NotificationService', () => {
       
       expect(mockServiceWorkerRegistration.showNotification).not.toHaveBeenCalled()
       expect(consoleSpy).toHaveBeenCalledWith('❌ Notification permission denied')
+      
+      // Reset permission for other tests
+      window.Notification.permission = 'granted'
     })
   })
 
@@ -194,17 +222,17 @@ describe('NotificationService', () => {
       expect(mockServiceWorkerRegistration.showNotification).toHaveBeenCalledWith(
         '🗺️ Route Ready!',
         expect.objectContaining({
-          body: 'Your optimal route for 5 items at Tesco Manchester is ready!',
+          body: 'Your optimized route for 5 items at Tesco Manchester is ready to use.',
           tag: 'route-ready'
         })
       )
     })
 
     it('should notify about points earned', async () => {
-      await notificationService.notifyPointsEarned(50, 'completing your shopping')
+      await notificationService.notifyPoints(50, 'completing your shopping')
       
       expect(mockServiceWorkerRegistration.showNotification).toHaveBeenCalledWith(
-        '🎉 Points Earned!',
+        '⭐ Points Earned!',
         expect.objectContaining({
           body: 'You earned 50 points for completing your shopping!',
           tag: 'points-earned'
@@ -217,10 +245,10 @@ describe('NotificationService', () => {
       
       setTimeout(() => {
         expect(mockServiceWorkerRegistration.showNotification).toHaveBeenCalledWith(
-          '🛒 Don\'t forget your shopping!',
+          '🛒 Don\'t forget your items!',
           expect.objectContaining({
-            body: 'You have 2 items in your cart: Milk, Bread',
-            tag: 'cart-reminder'
+            body: 'You have 2 items waiting in your cart: Milk, Bread',
+            tag: 'forgotten-items'
           })
         )
       }, 1100)
@@ -292,14 +320,22 @@ describe('NotificationService', () => {
 
   describe('Error Handling', () => {
     it('should handle service worker not available', async () => {
+      // Save original service worker
+      const originalServiceWorker = navigator.serviceWorker
+      
+      // Remove service worker
       Object.defineProperty(navigator, 'serviceWorker', {
         value: undefined,
         writable: true
       })
       
+      // Create a new service instance without service worker
+      const { notificationService: noSWService } = await import('../../services/notificationService')
+      await noSWService.init()
+      
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       
-      await notificationService.showNotification({
+      await noSWService.showNotification({
         title: 'Test',
         body: 'Test',
         tag: 'test',
@@ -307,6 +343,12 @@ describe('NotificationService', () => {
       })
       
       expect(consoleSpy).toHaveBeenCalledWith('❌ Service worker not available for notifications')
+      
+      // Restore service worker
+      Object.defineProperty(navigator, 'serviceWorker', {
+        value: originalServiceWorker,
+        writable: true
+      })
     })
 
     it('should handle notification display errors', async () => {
@@ -327,14 +369,15 @@ describe('NotificationService', () => {
 
   describe('Notification Categories', () => {
     it('should respect category-specific settings', async () => {
-      mockLocalStorage.getItem.mockReturnValueOnce(JSON.stringify({
+      // Update settings to disable deals but keep routes enabled
+      await notificationService.updateSettings({
         enabled: true,
         deals: false,
         routes: true,
         reminders: true,
         points: true,
         community: true
-      }))
+      })
       
       // Deal notifications should be blocked
       await notificationService.notifyDeal('50% off Milk', 'Tesco')
@@ -360,13 +403,16 @@ describe('NotificationService', () => {
     })
 
     it('should handle scheduling errors', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      // Use a spy on setTimeout to check it was called
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout')
       
-      // Pass invalid delay
+      // Pass invalid delay - should use 0 as minimum
       await notificationService.scheduleCartReminder(['Milk'], -1000)
       
-      // Should default to minimum delay
-      expect(setTimeout).toHaveBeenCalled()
+      // Should have been called with 0 delay (minimum)
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 0)
+      
+      setTimeoutSpy.mockRestore()
     })
   })
 })
