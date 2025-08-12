@@ -1,5 +1,14 @@
 # 🤖 CLAUDE ONBOARDING - CARTPILOT & SECOND CHANCE PROJECTS
 
+## 📧 EMAIL MONITORING & AUTOMATION
+**ACTIVE MONITORING**: Email reports automatically sent to davidward8668@gmail.com
+**Gmail Credentials**:
+- User: davidward8668@gmail.com  
+- App Password: sufp pltb ryyq uxru
+**Email Reporter**: `synthetic-interactions/email-reporter.js`
+**Schedule**: Can be triggered with `node email-reporter.js` or scheduled nightly
+**Send Test Email**: `cd synthetic-interactions && node email-reporter.js`
+
 ## 🚨 PERMISSIONS & AUTOMATION
 **USER CONSENT**: User has granted **FULL AUTONOMOUS PERMISSIONS** for:
 - ✅ All code changes in `C:\Users\David\Apps\Quick-Shop\*` 
@@ -218,6 +227,54 @@ git push
 
 ## 🚨 CRITICAL OPERATIONAL KNOWLEDGE
 
+## 🐛 CURRENT KNOWN ISSUES (August 12, 2025)
+
+### Critical User-Reported Issues
+1. **Barcode Scanner**: Camera doesn't open on PC or Android - shows error
+2. **AI Store Mapper**: Opens webcam but shows black screen on PC  
+3. **Product Location Voting**: Need voting system for community-verified locations (Aisle 22 incorrect example)
+4. **Earn Points Tutorial**: Needs better text explaining tutorial steps and where to go
+5. **Bug Reporter v8**: Too intrusive, needs aesthetic improvements inline with app design
+6. **Add Product Location**: 
+   - Missing camera preview before taking picture
+   - Needs autocorrect/dropdown for product names (prevent "millllk", "brod")
+   - Location should use dropdown not free text
+   - Final page needs "retake picture" and "go back" buttons
+7. **User Preferences**: No allergen preferences (coeliac disease, etc) in database
+8. **Data Protection**: Ensure user-entered locations aren't overwritten without voting
+9. **Image Privacy**: Ensure no images are retained from AI mapper
+
+### Test Failures (16 failing as of Aug 12)
+- NotificationService tests: Permission handling issues
+- PWAService tests: Service worker registration failures  
+- RealTimeSyncService tests: WebSocket connection issues
+
+### Database Schema Updates Needed
+```sql
+-- User allergen preferences
+CREATE TABLE user_preferences (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  has_coeliac BOOLEAN DEFAULT false,
+  allergens TEXT[], -- Array of allergen names
+  dietary_restrictions TEXT[],
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Product location voting
+CREATE TABLE location_votes (
+  id UUID PRIMARY KEY,
+  product_id UUID,
+  store_id UUID,  
+  aisle TEXT,
+  votes_up INTEGER DEFAULT 0,
+  votes_down INTEGER DEFAULT 0,
+  submitted_by UUID REFERENCES users(id),
+  verified BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
 ### Bug Fixing Priorities
 1. **Failing Tests**: Always fix failing tests immediately
 2. **TypeScript Errors**: Zero tolerance for TS errors
@@ -311,6 +368,8 @@ const updateStatus = () => {
 2. **Verify TypeScript**: Run `npm run typecheck`
 3. **Test Critical Features**: BugReporter, sync, navigation
 4. **Monitor C2 Progress**: Check collaboration messages
+5. **Send Email Report**: `cd synthetic-interactions && node email-reporter.js`
+6. **Review Known Issues**: Check the CURRENT KNOWN ISSUES section above
 
 ### Long-term Goals
 1. **CartPilot**: Maintain production stability, implement new features

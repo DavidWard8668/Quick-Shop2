@@ -20,6 +20,7 @@ import { GamificationDisplay } from "./GamificationDisplay";
 import { getCurrentUser, signOut, testSupabaseConnection, supabase } from "../supabaseClient";
 import { User } from '@supabase/supabase-js';
 import { fetchNearbyStoresFromDB, getCurrentLocation, getLocationFromPostcode, StoreData } from '../services/storeDataService'
+import AutoRepairInjector from '../utils/autoRepairInjector'
 
 // Mock implementations for removed advanced features
 const getUserProfile = async (userId: string): Promise<UserProfile | null> => {

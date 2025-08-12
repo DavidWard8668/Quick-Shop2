@@ -52,8 +52,8 @@ describe('RealTimeSyncService', () => {
     it('should connect when online', async () => {
       await realTimeSyncService.connect()
       
-      // Wait for connection to establish
-      await new Promise(resolve => setTimeout(resolve, 20))
+      // Wait for connection to establish (mock WebSocket opens after 10ms)
+      await new Promise(resolve => setTimeout(resolve, 50))
       
       expect(realTimeSyncService.isConnected()).toBe(true)
     })
@@ -71,7 +71,7 @@ describe('RealTimeSyncService', () => {
 
     it('should disconnect cleanly', async () => {
       await realTimeSyncService.connect()
-      await new Promise(resolve => setTimeout(resolve, 20))
+      await new Promise(resolve => setTimeout(resolve, 50))
       
       realTimeSyncService.disconnect()
       
@@ -111,7 +111,7 @@ describe('RealTimeSyncService', () => {
       const mockSend = vi.spyOn(MockWebSocket.prototype, 'send')
       
       await realTimeSyncService.connect()
-      await new Promise(resolve => setTimeout(resolve, 20))
+      await new Promise(resolve => setTimeout(resolve, 50))
       
       const cartItems = [
         { id: '1', name: 'Milk', completed: false },
@@ -131,7 +131,7 @@ describe('RealTimeSyncService', () => {
       const mockSend = vi.spyOn(MockWebSocket.prototype, 'send')
       
       await realTimeSyncService.connect()
-      await new Promise(resolve => setTimeout(resolve, 20))
+      await new Promise(resolve => setTimeout(resolve, 50))
       
       const route = [
         { name: 'Milk', aisle: 1, section: 'Dairy' },
@@ -196,7 +196,7 @@ describe('RealTimeSyncService', () => {
       realTimeSyncService.on('cartSync', mockCallback)
       
       await realTimeSyncService.connect()
-      await new Promise(resolve => setTimeout(resolve, 20))
+      await new Promise(resolve => setTimeout(resolve, 50))
       
       // Simulate receiving a message
       const mockMessage = {
@@ -219,7 +219,7 @@ describe('RealTimeSyncService', () => {
 
     it('should handle unknown message types gracefully', async () => {
       await realTimeSyncService.connect()
-      await new Promise(resolve => setTimeout(resolve, 20))
+      await new Promise(resolve => setTimeout(resolve, 50))
       
       // Simulate receiving an unknown message
       const mockMessage = {

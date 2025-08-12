@@ -137,6 +137,20 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   }
 
   const startCamera = async () => {
+
+  // Camera access helper
+  const requestCameraAccess = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' }, 
+        audio: false 
+      });
+      return stream;
+    } catch (error) {
+      console.error('Camera access denied:', error);
+      throw error;
+    }
+  };
     try {
       setError('')
       setIsScanning(true)
@@ -182,6 +196,20 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   }
 
   const stopCamera = () => {
+
+  // Camera access helper
+  const requestCameraAccess = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' }, 
+        audio: false 
+      });
+      return stream;
+    } catch (error) {
+      console.error('Camera access denied:', error);
+      throw error;
+    }
+  };
     scanningRef.current = false
     if (codeReaderRef.current) {
       codeReaderRef.current.reset()
@@ -194,6 +222,20 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   }
 
   const handleManualEntry = () => {
+
+  // Camera access helper
+  const requestCameraAccess = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' }, 
+        audio: false 
+      });
+      return stream;
+    } catch (error) {
+      console.error('Camera access denied:', error);
+      throw error;
+    }
+  };
     const barcode = prompt('Enter barcode manually (12-13 digits):')
     if (barcode && /^\d{12,13}$/.test(barcode)) {
       handleBarcodeDetected(barcode)

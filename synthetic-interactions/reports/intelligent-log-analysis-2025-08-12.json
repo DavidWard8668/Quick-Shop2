@@ -1,0 +1,65 @@
+{
+  "title": "Intelligent Log Analysis Report",
+  "timestamp": "12/08/2025, 12:31:51",
+  "summary": {
+    "totalLogs": 1,
+    "errorCount": 7,
+    "warningCount": 8,
+    "criticalIssues": 1,
+    "autoFixAttempts": 1,
+    "successfulFixes": 0
+  },
+  "details": {
+    "timestamp": "2025-08-12T11:31:46.329Z",
+    "totalLogs": 1,
+    "errorCount": 7,
+    "warningCount": 8,
+    "criticalIssues": [
+      {
+        "source": "monitor-2025-08-12.log",
+        "line": "2025-08-12 11:03:28 [WARNING] Dev server not responding",
+        "type": "network"
+      }
+    ],
+    "performanceIssues": [],
+    "autoFixAttempts": [
+      {
+        "issue": "network",
+        "timestamp": "2025-08-12T11:31:46.337Z",
+        "success": false,
+        "actions": [
+          "Attempting to restart development server",
+          "Fix failed: Command timed out"
+        ]
+      }
+    ],
+    "recommendations": [
+      {
+        "priority": "critical",
+        "action": "Address critical system issues",
+        "details": "1 critical issues detected",
+        "automated": true
+      },
+      {
+        "priority": "low",
+        "action": "Schedule regular log cleanup",
+        "details": "Maintain log file sizes for optimal performance",
+        "automated": true
+      }
+    ]
+  },
+  "recommendations": [
+    {
+      "priority": "critical",
+      "action": "Address critical system issues",
+      "details": "1 critical issues detected",
+      "automated": true
+    },
+    {
+      "priority": "low",
+      "action": "Schedule regular log cleanup",
+      "details": "Maintain log file sizes for optimal performance",
+      "automated": true
+    }
+  ]
+}
