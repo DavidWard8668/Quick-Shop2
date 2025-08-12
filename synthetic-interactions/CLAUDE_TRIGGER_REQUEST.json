@@ -1,0 +1,34 @@
+{
+  "timestamp": "2025-08-12T13:33:32.434Z",
+  "urgency": "high",
+  "systemHealth": "degraded",
+  "triggerReasons": [
+    {
+      "type": "consecutive_failures",
+      "priority": "high",
+      "message": "Same issue (Notification API) has failed 4 times",
+      "details": "Auto-fix is repeatedly applying the same fix, indicating a deeper problem",
+      "suggestedAction": "Investigate root cause of Notification API test instability"
+    }
+  ],
+  "issuesSummary": {
+    "totalIssues": 4,
+    "criticalIssues": 0,
+    "consecutiveFailures": 4,
+    "unresolved": 0
+  },
+  "contextFiles": [
+    "synthetic-interactions/monitoring-logs/monitor-2025-08-12.log",
+    "synthetic-interactions/reports/intelligent-log-analysis-2025-08-12.json",
+    "src/test/**/*.test.tsx",
+    "package.json"
+  ],
+  "requestedActions": [
+    "Investigate recurring Notification API test failures",
+    "Analyze root cause of consecutive auto-fix repetition",
+    "Review test infrastructure and mocking strategy",
+    "Implement permanent solution to prevent issue recurrence",
+    "Optimize monitoring and auto-fix effectiveness"
+  ],
+  "expectedDeliverable": "Comprehensive issue resolution and system optimization"
+}

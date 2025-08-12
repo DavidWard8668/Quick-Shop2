@@ -1,0 +1,30 @@
+{
+  "name": "cartpilot-synthetic-testing",
+  "version": "1.0.0",
+  "description": "Comprehensive synthetic user interaction testing with automatic repair",
+  "type": "module",
+  "main": "element-interaction-engine.js",
+  "scripts": {
+    "test": "node element-interaction-engine.js",
+    "test:cartpilot": "TARGET_URL=http://localhost:5173 APP_NAME=cartpilot node element-interaction-engine.js",
+    "test:secondchance": "TARGET_URL=http://localhost:3002 APP_NAME=secondchance node element-interaction-engine.js",
+    "schedule": "powershell -ExecutionPolicy Bypass -File scheduled-runner.ps1",
+    "schedule:once": "powershell -ExecutionPolicy Bypass -File scheduled-runner.ps1 -Mode once",
+    "schedule:continuous": "powershell -ExecutionPolicy Bypass -File scheduled-runner.ps1 -Mode continuous",
+    "setup:task": "powershell -ExecutionPolicy Bypass -File setup-scheduled-task.ps1",
+    "dashboard": "start monitoring-dashboard.html",
+    "repair:apply": "node apply-repairs.js",
+    "report": "node generate-report.js",
+    "email:send": "node email-reporter.js",
+    "email:schedule": "powershell -ExecutionPolicy Bypass -File nightly-email-scheduler.ps1",
+    "email:test": "powershell -ExecutionPolicy Bypass -File nightly-email-scheduler.ps1 -SendNow"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.40.0",
+    "nodemailer": "^6.10.1",
+    "playwright": "^1.40.0"
+  },
+  "devDependencies": {
+    "chart.js": "^4.4.0"
+  }
+}
