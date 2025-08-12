@@ -22,7 +22,7 @@ export const BugReporter: React.FC<BugReporterProps> = ({ userEmail, userId }) =
 
   const handleSubmit = async () => {
     if (!subject.trim() || !description.trim()) {
-      alert('Please fill in all fields')
+      alert('Please tell us what went wrong and provide some details!')
       return
     }
 
@@ -113,7 +113,7 @@ ${emailBody}`
 
       // Provide feedback based on what worked
       if (clipboardSuccess && emailOpened) {
-        alert('✅ Success! Email client opened and content copied to clipboard.')
+        alert('✅ Perfect! Your email client opened and we copied your message to clipboard.')
         setSubmitted(true)
         setTimeout(() => {
           setIsOpen(false)
@@ -124,19 +124,19 @@ ${emailBody}`
       } else if (emailOpened && !clipboardSuccess) {
         // Show manual copy area
         setShowCopyArea(true)
-        alert('📧 Email client opened!\n\n⚠️ Clipboard blocked by browser.\n\nPlease copy the content from the text area below.')
+        alert('📧 Email client opened!\n\nYour message is ready to copy from the text area below.')
       } else if (clipboardSuccess && !emailOpened) {
-        alert('📋 Content copied to clipboard!\n\n📧 Please paste into your email client:\nexiledev8668@gmail.com')
+        alert('📋 Message copied to clipboard!\n\nPlease paste it into your email app and send to: exiledev8668@gmail.com')
         setShowCopyArea(true)
       } else {
         // Both failed - show manual copy area
         setShowCopyArea(true)
-        alert('⚠️ Browser security restrictions detected.\n\nPlease copy the content below and send to:\nexiledev8668@gmail.com')
+        alert('📝 Almost there!\n\nPlease copy your message from the text area below and email it to us.')
       }
 
     } catch (error) {
       console.error('Error submitting:', error)
-      alert('Error submitting report. Please try again.')
+      alert('Something went wrong sending your feedback. Please try again!')
     } finally {
       setIsSubmitting(false)
     }
@@ -149,14 +149,14 @@ ${emailBody}`
       try {
         // Try modern API first
         await navigator.clipboard.writeText(emailContent)
-        alert('✅ Copied to clipboard!')
+        alert('✅ Copied! Now paste it into your email app.')
       } catch {
         // Fallback to execCommand
         try {
           document.execCommand('copy')
-          alert('✅ Copied to clipboard!')
+          alert('✅ Copied! Now paste it into your email app.')
         } catch {
-          alert('⚠️ Please manually select and copy the text (Ctrl+C or Cmd+C)')
+          alert('Please select all the text and copy it (Ctrl+C or Cmd+C)')
         }
       }
     }
@@ -181,7 +181,7 @@ ${emailBody}`
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
-            <span>Report an Issue</span>
+            <span>Help Us Improve CartPilot</span>
             <button
               onClick={() => {
                 setIsOpen(false)
@@ -189,6 +189,7 @@ ${emailBody}`
                 setEmailContent('')
               }}
               className="text-gray-500 hover:text-gray-700"
+              aria-label="Close"
             >
               ✕
             </button>
@@ -218,26 +219,26 @@ ${emailBody}`
 
               <div className="space-y-2">
                 <label htmlFor="subject" className="text-sm font-medium">
-                  Subject
+                  What went wrong?
                 </label>
                 <Input
                   id="subject"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Brief description of the issue"
+                  placeholder="e.g., Barcode scanner not working"
                   disabled={isSubmitting}
                 />
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="description" className="text-sm font-medium">
-                  Description
+                  Tell us more
                 </label>
                 <Textarea
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Please provide details about the issue..."
+                  placeholder="What were you trying to do? What happened instead? Any error messages?"
                   rows={4}
                   disabled={isSubmitting}
                 />
@@ -248,19 +249,19 @@ ${emailBody}`
                 disabled={isSubmitting || !subject.trim() || !description.trim()}
                 className="w-full"
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Report'}
+                {isSubmitting ? 'Sending...' : 'Send Feedback'}
               </Button>
 
               {submitted && (
                 <div className="text-green-600 text-center">
-                  ✅ Report submitted successfully!
+                  ✅ Thank you! Your feedback helps us make CartPilot better.
                 </div>
               )}
             </>
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Copy the content below and send to: <strong>exiledev8668@gmail.com</strong>
+                📧 Your feedback is ready! Copy the message below and we'll get it via email:
               </p>
               <textarea
                 id="emailContentArea"
@@ -271,7 +272,7 @@ ${emailBody}`
               />
               <div className="flex gap-2">
                 <Button onClick={handleManualCopy} className="flex-1">
-                  📋 Copy to Clipboard
+                  📋 Copy Message
                 </Button>
                 <Button
                   onClick={() => {
@@ -280,7 +281,7 @@ ${emailBody}`
                   variant="outline"
                   className="flex-1"
                 >
-                  📧 Open Email Client
+                  📧 Open Email
                 </Button>
               </div>
               <Button
