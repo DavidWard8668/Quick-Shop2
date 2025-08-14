@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
+import { VideoTutorial } from './VideoTutorial'
 
 interface TutorialStep {
   id: number
@@ -157,6 +158,7 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(1)
   const [showQuickStart, setShowQuickStart] = useState(true)
+  const [showVideo, setShowVideo] = useState(false)
 
   // Add keyboard escape handler for better accessibility
   useEffect(() => {
@@ -227,6 +229,18 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
   }
 
   if (!isOpen) return null
+
+  // Show video tutorial if requested
+  if (showVideo) {
+    return (
+      <>
+        <VideoTutorial 
+          isOpen={showVideo} 
+          onClose={() => setShowVideo(false)} 
+        />
+      </>
+    )
+  }
 
   if (showQuickStart) {
     return (
@@ -308,17 +322,23 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Button 
+                onClick={() => setShowVideo(true)}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white min-h-[48px] text-lg"
+              >
+                🎬 Watch Video Tutorial
+              </Button>
+              <Button 
                 onClick={() => setShowQuickStart(false)}
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white min-h-[48px] text-lg"
               >
-                📚 Take Full Tutorial
+                📚 Interactive Tutorial
               </Button>
               <Button 
                 onClick={handleSkip}
                 variant="outline"
                 className="flex-1 min-h-[48px] text-lg font-medium"
               >
-                🚀 Start Shopping Now
+                🚀 Start Shopping
               </Button>
             </div>
 
