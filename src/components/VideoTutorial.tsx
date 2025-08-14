@@ -69,8 +69,8 @@ export const VideoTutorial: React.FC<VideoTutorialProps> = ({ isOpen, onClose })
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
             >
-              <source src="/videos/cartpilot-tutorial.mp4" type="video/mp4" />
               <source src="/videos/cartpilot-tutorial.webm" type="video/webm" />
+              <source src="/videos/cartpilot-tutorial.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
             

@@ -171,9 +171,8 @@ describe('NotificationService', () => {
     })
 
     it('should handle notification permission denied', async () => {
-      // Set permission to denied
-      window.Notification.permission = 'denied'
-      Object.defineProperty(global, 'Notification', {
+      // Update service permission and global mock
+      Object.defineProperty(window, 'Notification', {
         value: {
           permission: 'denied',
           requestPermission: vi.fn().mockResolvedValue('denied')
@@ -182,13 +181,13 @@ describe('NotificationService', () => {
         configurable: true
       })
       
-      // Create a new instance with denied permission
-      const { notificationService: deniedService } = await import('../../services/notificationService')
-      await deniedService.init()
+      // Update the service's internal permission state
+      const service = notificationService as any
+      service.permission = 'denied'
       
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
       
-      await deniedService.showNotification({
+      await notificationService.showNotification({
         title: 'Test Notification',
         body: 'This is a test',
         tag: 'test',
@@ -199,7 +198,15 @@ describe('NotificationService', () => {
       expect(consoleSpy).toHaveBeenCalledWith('❌ Notification permission denied')
       
       // Reset permission for other tests
-      window.Notification.permission = 'granted'
+      Object.defineProperty(window, 'Notification', {
+        value: {
+          permission: 'granted',
+          requestPermission: vi.fn().mockResolvedValue('granted')
+        },
+        writable: true,
+        configurable: true
+      })
+      service.permission = 'granted'
     })
   })
 
@@ -295,10 +302,26 @@ describe('NotificationService', () => {
 
   describe('Permission Management', () => {
     it('should request notification permission', async () => {
+      // Reset permission to 'default' to trigger request
+      const service = notificationService as any
+      service.permission = 'default'
+      
+      Object.defineProperty(window, 'Notification', {
+        value: {
+          permission: 'default',
+          requestPermission: vi.fn().mockResolvedValue('granted')
+        },
+        writable: true,
+        configurable: true
+      })
+      
       const permission = await notificationService.requestPermission()
       
       expect(window.Notification.requestPermission).toHaveBeenCalled()
       expect(permission).toBe('granted')
+      
+      // Reset for other tests
+      service.permission = 'granted'
     })
 
     it('should handle permission already granted', async () => {
@@ -320,22 +343,14 @@ describe('NotificationService', () => {
 
   describe('Error Handling', () => {
     it('should handle service worker not available', async () => {
-      // Save original service worker
-      const originalServiceWorker = navigator.serviceWorker
-      
-      // Remove service worker
-      Object.defineProperty(navigator, 'serviceWorker', {
-        value: undefined,
-        writable: true
-      })
-      
-      // Create a new service instance without service worker
-      const { notificationService: noSWService } = await import('../../services/notificationService')
-      await noSWService.init()
+      // Temporarily remove registration from service
+      const service = notificationService as any
+      const originalRegistration = service.registration
+      service.registration = null
       
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       
-      await noSWService.showNotification({
+      await notificationService.showNotification({
         title: 'Test',
         body: 'Test',
         tag: 'test',
@@ -344,11 +359,8 @@ describe('NotificationService', () => {
       
       expect(consoleSpy).toHaveBeenCalledWith('❌ Service worker not available for notifications')
       
-      // Restore service worker
-      Object.defineProperty(navigator, 'serviceWorker', {
-        value: originalServiceWorker,
-        writable: true
-      })
+      // Restore registration
+      service.registration = originalRegistration
     })
 
     it('should handle notification display errors', async () => {

@@ -410,7 +410,13 @@ class PWAService {
   private emit(event: string, data?: any) {
     const callbacks = this.listeners.get(event)
     if (callbacks) {
-      callbacks.forEach(callback => callback(data))
+      callbacks.forEach(callback => {
+        try {
+          callback(data)
+        } catch (error) {
+          console.error('❌ PWA Service event callback error:', error)
+        }
+      })
     }
   }
 

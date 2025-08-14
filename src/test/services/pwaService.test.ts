@@ -22,10 +22,11 @@ const mockServiceWorkerRegistration = {
   }
 }
 
-// Mock navigator.serviceWorker
+// Mock navigator.serviceWorker BEFORE importing pwaService
+const mockRegister = vi.fn().mockResolvedValue(mockServiceWorkerRegistration)
 Object.defineProperty(navigator, 'serviceWorker', {
   value: {
-    register: vi.fn().mockResolvedValue(mockServiceWorkerRegistration),
+    register: mockRegister,
     addEventListener: vi.fn(),
     controller: null
   },
@@ -70,8 +71,15 @@ Object.defineProperty(window, 'caches', {
 })
 
 describe('PWAService', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    
+    // Reset service worker registration mock
+    mockRegister.mockResolvedValue(mockServiceWorkerRegistration)
+    
+    // Reset the pwaService registration
+    const service = pwaService as any
+    service.registration = mockServiceWorkerRegistration
     
     // Reset install prompt state
     const mockPromptEvent = {
@@ -83,21 +91,30 @@ describe('PWAService', () => {
     
     // Simulate install prompt availability
     window.dispatchEvent(new CustomEvent('beforeinstallprompt', { detail: mockPromptEvent }))
+    
+    // Allow PWA service to initialize
+    await new Promise(resolve => setTimeout(resolve, 10))
   })
 
   describe('Service Worker Registration', () => {
-    it('should register service worker successfully', () => {
-      expect(navigator.serviceWorker.register).toHaveBeenCalledWith('/sw.js', {
+    it('should register service worker successfully', async () => {
+      // The service worker registration happens during the module load/constructor
+      // Since the test imports pwaService, it should have triggered registration
+      // Just verify it was called during module initialization
+      expect(mockRegister).toHaveBeenCalledWith('/sw.js', {
         scope: '/'
       })
     })
 
     it('should handle service worker registration failure', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      
+      // Mock failed registration
       navigator.serviceWorker.register = vi.fn().mockRejectedValue(new Error('Registration failed'))
       
-      // Create new instance to trigger registration
-      await new Promise(resolve => setTimeout(resolve, 10))
+      // Trigger the service init by accessing the pwaService which calls init in constructor
+      const service = pwaService as any
+      await service.init()
       
       expect(consoleSpy).toHaveBeenCalledWith('❌ Service Worker registration failed:', expect.any(Error))
     })
@@ -114,6 +131,14 @@ describe('PWAService', () => {
     })
 
     it('should show install prompt', async () => {
+      // Set up the deferred prompt on the service
+      const service = pwaService as any
+      service.deferredPrompt = {
+        prompt: vi.fn().mockResolvedValue(),
+        userChoice: Promise.resolve({ outcome: 'accepted', platform: 'web' }),
+        platforms: ['web']
+      }
+      
       const result = await pwaService.showInstallPrompt()
       expect(result).toBe(true)
     })
@@ -168,6 +193,10 @@ describe('PWAService', () => {
     })
 
     it('should check for updates', async () => {
+      // Set the registration on the service
+      const service = pwaService as any
+      service.registration = mockServiceWorkerRegistration
+      
       const result = await pwaService.checkForUpdates()
       
       expect(mockServiceWorkerRegistration.update).toHaveBeenCalled()
@@ -177,6 +206,10 @@ describe('PWAService', () => {
 
   describe('Background Sync', () => {
     it('should request background sync', async () => {
+      // Set the registration on the service
+      const service = pwaService as any
+      service.registration = mockServiceWorkerRegistration
+      
       await pwaService.requestBackgroundSync('test-sync')
       
       expect(mockServiceWorkerRegistration.sync.register).toHaveBeenCalledWith('test-sync')
@@ -198,17 +231,14 @@ describe('PWAService', () => {
     it('should request notification permission', async () => {
       const permission = await pwaService.requestNotificationPermission()
       
-      expect(Notification.requestPermission).toHaveBeenCalled()
+      expect(window.Notification.requestPermission).toHaveBeenCalled()
       expect(permission).toBe('granted')
     })
 
     it('should handle notification not supported', async () => {
       // Mock Notification API as undefined
       const originalNotification = window.Notification
-      Object.defineProperty(window, 'Notification', {
-        value: undefined,
-        configurable: true
-      })
+      delete (window as any).Notification
       
       const permission = await pwaService.requestNotificationPermission()
       
@@ -222,17 +252,39 @@ describe('PWAService', () => {
     })
 
     it('should subscribe to push notifications', async () => {
-      // Mock VAPID key
-      process.env.REACT_APP_VAPID_PUBLIC_KEY = 'test-vapid-key'
+      // Mock existing subscription to null (so new subscription is created)
+      mockServiceWorkerRegistration.pushManager.getSubscription.mockResolvedValue(null)
+      
+      // Mock VAPID key - use import.meta.env for Vite
+      const originalEnv = import.meta.env
+      Object.defineProperty(import.meta, 'env', {
+        value: { ...originalEnv, VITE_VAPID_PUBLIC_KEY: 'test-vapid-key' },
+        writable: true
+      })
       
       const subscription = await pwaService.subscribeToPushNotifications()
       
       expect(mockServiceWorkerRegistration.pushManager.subscribe).toHaveBeenCalled()
       expect(subscription).toBeTruthy()
+      
+      // Restore original env
+      Object.defineProperty(import.meta, 'env', {
+        value: originalEnv,
+        writable: true
+      })
     })
 
     it('should handle push subscription failure', async () => {
+      // Mock subscription failure
+      mockServiceWorkerRegistration.pushManager.getSubscription.mockResolvedValue(null)
       mockServiceWorkerRegistration.pushManager.subscribe = vi.fn().mockRejectedValue(new Error('Subscription failed'))
+      
+      // Mock VAPID key
+      const originalEnv = import.meta.env
+      Object.defineProperty(import.meta, 'env', {
+        value: { ...originalEnv, VITE_VAPID_PUBLIC_KEY: 'test-vapid-key' },
+        writable: true
+      })
       
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       
@@ -240,6 +292,12 @@ describe('PWAService', () => {
       
       expect(subscription).toBeNull()
       expect(consoleSpy).toHaveBeenCalledWith('❌ Push subscription failed:', expect.any(Error))
+      
+      // Restore original env
+      Object.defineProperty(import.meta, 'env', {
+        value: originalEnv,
+        writable: true
+      })
     })
   })
 
@@ -343,7 +401,9 @@ describe('PWAService', () => {
       
       // Trigger private emit method
       const service = pwaService as any
-      service.emit('test-event', { data: 'test' })
+      expect(() => {
+        service.emit('test-event', { data: 'test' })
+      }).not.toThrow()
       
       expect(consoleSpy).toHaveBeenCalled()
     })
@@ -351,6 +411,17 @@ describe('PWAService', () => {
 
   describe('PWA Status', () => {
     it('should get comprehensive PWA status', () => {
+      // Ensure Notification is available for status check
+      if (!window.Notification) {
+        Object.defineProperty(window, 'Notification', {
+          value: {
+            permission: 'default',
+            requestPermission: vi.fn().mockResolvedValue('granted')
+          },
+          configurable: true
+        })
+      }
+      
       const status = pwaService.getStatus()
       
       expect(status).toHaveProperty('isInstalled')
