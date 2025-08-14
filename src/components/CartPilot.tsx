@@ -687,36 +687,50 @@ export const CartPilot: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-700 overflow-x-hidden">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+        {/* Mobile-First Header Layout */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           {/* Logo Section */}
-          <div className="flex items-center gap-4">
-            <img 
-              src="/favicon.ico" 
-              alt="CartPilot Logo" 
-              className="w-16 h-16 rounded-full object-cover shadow-lg"
-            />
-            <div>
-              <h1 className="text-3xl font-bold text-white">CARTPILOT</h1>
-              <div className="flex items-center gap-2">
-                <p className="text-purple-200 text-sm">Your guide to stress free shopping</p>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setShowTutorial(true)}
-                  className="text-purple-200 hover:text-white hover:bg-white/10 h-6 px-2 text-xs"
-                >
-                  📚 Help
-                </Button>
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <img 
+                src="/favicon.ico" 
+                alt="CartPilot Logo" 
+                className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover shadow-lg"
+              />
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">CARTPILOT</h1>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <p className="text-purple-200 text-xs sm:text-sm hidden sm:block">Your guide to stress free shopping</p>
+                  <p className="text-purple-200 text-xs sm:hidden">Smart shopping guide</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowTutorial(true)}
+                    className="text-purple-200 hover:text-white hover:bg-white/10 h-5 sm:h-6 px-1 sm:px-2 text-xs"
+                  >
+                    📚 Help
+                  </Button>
+                </div>
               </div>
             </div>
+            
+            {/* Mobile Sign In Button */}
+            {!user && (
+              <Button 
+                onClick={() => setShowAuthModal(true)}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 font-semibold rounded-lg shadow-lg sm:hidden"
+              >
+                🔑 Sign In
+              </Button>
+            )}
           </div>
           
-          {/* Welcome & Sign Out Section */}
-          <div className="flex items-center gap-4">
+          {/* Desktop Welcome & Sign Out Section */}
+          <div className="hidden sm:flex sm:items-center gap-4">
             {user ? (
               <>
-                <span className="text-white font-medium">
+                <span className="text-white font-medium text-sm lg:text-base">
                   Welcome, {userProfile?.preferred_name || userProfile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Navigator'}
                 </span>
                 <div className="flex gap-2">
@@ -747,22 +761,51 @@ export const CartPilot: React.FC = () => {
               </Button>
             )}
           </div>
+
+          {/* Mobile User Menu */}
+          {user && (
+            <div className="flex sm:hidden items-center justify-between w-full pt-2 border-t border-white/20">
+              <span className="text-white font-medium text-sm">
+                Welcome, {userProfile?.preferred_name || userProfile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Navigator'}
+              </span>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowChangePasswordModal(true)}
+                  className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600 text-xs px-2"
+                >
+                  Password
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleSignOut}
+                  className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600 text-xs px-2"
+                >
+                  Sign Out
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
 
         {/* Navigation Tabs */}
-        <div className="flex justify-center gap-2 mb-8 overflow-x-auto">
+        <div className="flex justify-center gap-1 sm:gap-2 mb-6 sm:mb-8 overflow-x-auto px-2">
           <Button
             onClick={() => setActiveTab('stores')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base whitespace-nowrap ${
               activeTab === 'stores' 
                 ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
                 : 'bg-white/20 hover:bg-white/30 text-white border border-white/30'
             }`}
           >
-            📍 Stores
+            <span className="text-sm sm:text-base">📍</span>
+            <span className="hidden xs:inline sm:inline">Stores</span>
+            <span className="xs:hidden sm:hidden">Stores</span>
             {storeCount > 0 && (
-              <Badge className="bg-white/20 text-white ml-1">
+              <Badge className="bg-white/20 text-white ml-1 text-xs">
                 {storeCount}
               </Badge>
             )}
@@ -770,46 +813,55 @@ export const CartPilot: React.FC = () => {
           <Button
             onClick={() => setActiveTab('navigate')}
             disabled={!selectedStore}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base whitespace-nowrap ${
               activeTab === 'navigate' 
                 ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
                 : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 disabled:opacity-50'
             }`}
           >
-            🧭 Navigate
+            <span className="text-sm sm:text-base">🧭</span>
+            <span className="hidden sm:inline">Navigate</span>
+            <span className="sm:hidden">Nav</span>
           </Button>
           <Button
             onClick={() => setActiveTab('cart')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base whitespace-nowrap ${
               activeTab === 'cart' 
                 ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
                 : 'bg-white/20 hover:bg-white/30 text-white border border-white/30'
             }`}
           >
-            🛒 Cart
+            <span className="text-sm sm:text-base">🛒</span>
+            <span>Cart</span>
           </Button>
           <Button
             onClick={() => setActiveTab('map')}
             disabled={!selectedStore || cartItems.length === 0}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base whitespace-nowrap ${
               activeTab === 'map' 
                 ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
                 : 'bg-white/20 hover:bg-white/30 text-white border border-white/30 disabled:opacity-50'
             }`}
           >
-            🗺️ Map
-            {routeGenerated && <Badge className="bg-blue-500 text-white ml-1">Route Ready</Badge>}
+            <span className="text-sm sm:text-base">🗺️</span>
+            <span className="hidden sm:inline">Map</span>
+            <span className="sm:hidden">Map</span>
+            {routeGenerated && <Badge className="bg-blue-500 text-white ml-1 text-xs hidden sm:inline">Route Ready</Badge>}
+            {routeGenerated && <Badge className="bg-blue-500 text-white ml-1 text-xs sm:hidden">✓</Badge>}
           </Button>
           <Button
             onClick={() => setActiveTab('pilot')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base whitespace-nowrap ${
               activeTab === 'pilot' 
                 ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg' 
                 : 'bg-white/20 hover:bg-white/30 text-white border border-white/30'
             }`}
           >
-            👨‍✈️ Pilot
-            {user && <Badge className="bg-orange-500 text-white ml-1">Premium</Badge>}
+            <span className="text-sm sm:text-base">👨‍✈️</span>
+            <span className="hidden sm:inline">Pilot</span>
+            <span className="sm:hidden">Pilot</span>
+            {user && <Badge className="bg-orange-500 text-white ml-1 text-xs hidden sm:inline">Premium</Badge>}
+            {user && <Badge className="bg-orange-500 text-white ml-1 text-xs sm:hidden">✓</Badge>}
           </Button>
         </div>
 

@@ -26,16 +26,21 @@ export const AIStoreMapper: React.FC<AIStoreMappingProps> = ({
   onClose,
   isOpen
 }) => {
-  const [step, setStep] = useState<'instructions' | 'capture' | 'analyze' | 'verify' | 'complete'>('instructions')
+  const [step, setStep] = useState<'instructions' | 'capture' | 'video_record' | 'analyze' | 'verify' | 'complete'>('instructions')
   const [capturedImages, setCapturedImages] = useState<string[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisProgress, setAnalysisProgress] = useState(0)
   const [detectedSections, setDetectedSections] = useState<DetectedSection[]>([])
   const [userNotes, setUserNotes] = useState('')
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingDuration, setRecordingDuration] = useState(0)
+  const [recordedVideo, setRecordedVideo] = useState<string>('')
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordedChunksRef = useRef<Blob[]>([])
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
 
   const MAPPING_INSTRUCTIONS = [
@@ -43,9 +48,18 @@ export const AIStoreMapper: React.FC<AIStoreMappingProps> = ({
     "📱 Hold phone horizontally for wide shots",
     "🏃‍♂️ Walk slowly through each aisle",
     "📸 Capture aisle signs and section headers",
-    "🥬 Include produce, dairy, meat sections",
+    "🥬 Include produce, dairy, meat sections", 
     "🛒 End at checkout area",
     "📝 Add any notes about layout"
+  ]
+
+  const VIDEO_INSTRUCTIONS = [
+    "🎬 Record a continuous walkthrough of the store",
+    "📱 Keep the camera steady and move slowly",
+    "🎯 Focus on aisle numbers and section signs",
+    "⏰ Aim for 2-5 minutes of footage",
+    "🔊 Narrate what you see (optional)",
+    "✨ AI will analyze frame by frame automatically"
   ]
 
   const startCamera = async () => {
@@ -75,6 +89,70 @@ export const AIStoreMapper: React.FC<AIStoreMappingProps> = ({
       cameraStream.getTracks().forEach(track => track.stop())
       setCameraStream(null)
     }
+  }
+
+  // Video recording functions
+  const startVideoRecording = async () => {
+    try {
+      if (!cameraStream) {
+        await startCamera()
+        return
+      }
+
+      recordedChunksRef.current = []
+      const mediaRecorder = new MediaRecorder(cameraStream, {
+        mimeType: 'video/webm;codecs=vp8,opus'
+      })
+      
+      mediaRecorderRef.current = mediaRecorder
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data)
+        }
+      }
+      
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' })
+        const videoUrl = URL.createObjectURL(blob)
+        setRecordedVideo(videoUrl)
+        setIsRecording(false)
+        setRecordingDuration(0)
+        setStep('analyze')
+      }
+      
+      mediaRecorder.start(1000) // Capture data every second
+      setIsRecording(true)
+      setRecordingDuration(0)
+      
+      // Start recording timer
+      const timer = setInterval(() => {
+        setRecordingDuration(prev => {
+          if (prev >= 300) { // Max 5 minutes
+            stopVideoRecording()
+            clearInterval(timer)
+            return 300
+          }
+          return prev + 1
+        })
+      }, 1000)
+      
+    } catch (error) {
+      console.error('Error starting video recording:', error)
+      alert('Unable to start video recording. Please try again.')
+    }
+  }
+
+  const stopVideoRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+    }
+  }
+
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   const captureFrame = () => {
@@ -109,15 +187,23 @@ export const AIStoreMapper: React.FC<AIStoreMappingProps> = ({
     }
   }
 
-  const analyzeImages = async () => {
-    if (capturedImages.length === 0) return
+  const analyzeContent = async () => {
+    if (capturedImages.length === 0 && !recordedVideo) return
 
     setIsAnalyzing(true)
     setAnalysisProgress(0)
     setStep('analyze')
 
-    // Simulate AI analysis with progressive updates
-    const progressSteps = [
+    // Different analysis steps for video vs images
+    const progressSteps = recordedVideo ? [
+      { progress: 15, message: "Processing video frames..." },
+      { progress: 30, message: "Extracting key frames..." },
+      { progress: 45, message: "Analyzing scene transitions..." },
+      { progress: 60, message: "Detecting text and signage..." },
+      { progress: 75, message: "Mapping store sections..." },
+      { progress: 90, message: "Correlating spatial relationships..." },
+      { progress: 100, message: "Generating comprehensive store map..." }
+    ] : [
       { progress: 20, message: "Analyzing image composition..." },
       { progress: 40, message: "Detecting text and signage..." },
       { progress: 60, message: "Identifying store sections..." },
@@ -126,11 +212,11 @@ export const AIStoreMapper: React.FC<AIStoreMappingProps> = ({
     ]
 
     for (const step of progressSteps) {
-      await new Promise(resolve => setTimeout(resolve, 800))
+      await new Promise(resolve => setTimeout(resolve, recordedVideo ? 1200 : 800))
       setAnalysisProgress(step.progress)
     }
 
-    // Simulate AI detection results
+    // Enhanced AI detection results for video analysis
     const mockDetections: DetectedSection[] = [
       {
         name: "Produce Section",
@@ -258,12 +344,25 @@ export const AIStoreMapper: React.FC<AIStoreMappingProps> = ({
                 </div>
               </div>
 
-              <Button 
-                onClick={startCamera}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 text-lg font-semibold"
-              >
-                🚀 Start AI Store Mapping
-              </Button>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Button 
+                    onClick={() => setStep('video_record')}
+                    className="bg-blue-500 hover:bg-blue-600 text-white py-4 text-lg font-semibold"
+                  >
+                    🎬 Record Video Walkthrough
+                  </Button>
+                  <Button 
+                    onClick={startCamera}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white py-4 text-lg font-semibold"
+                  >
+                    📸 Take Individual Photos
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 text-center">
+                  💡 Video recording provides more comprehensive mapping data
+                </p>
+              </div>
             </div>
           )}
 
@@ -300,7 +399,7 @@ export const AIStoreMapper: React.FC<AIStoreMappingProps> = ({
                   📸 Capture Section
                 </Button>
                 <Button 
-                  onClick={analyzeImages}
+                  onClick={analyzeContent}
                   disabled={capturedImages.length < 3}
                   className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3"
                 >
@@ -318,6 +417,136 @@ export const AIStoreMapper: React.FC<AIStoreMappingProps> = ({
                       className="w-full h-20 object-cover rounded border-2 border-green-300"
                     />
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 'video_record' && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">🎬 Video Store Walkthrough</h3>
+                <p className="text-gray-600 mb-4">
+                  {isRecording ? "Recording in progress..." : "Ready to record your store walkthrough"}
+                </p>
+                {isRecording && (
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                    <Badge className="bg-red-500 text-white">
+                      REC {formatRecordingTime(recordingDuration)}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+
+              {/* Video Instructions */}
+              {!isRecording && !recordedVideo && (
+                <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                  <h4 className="font-semibold mb-3 text-blue-800">🎯 Video Recording Tips:</h4>
+                  <div className="space-y-2">
+                    {VIDEO_INSTRUCTIONS.map((instruction, index) => (
+                      <div key={index} className="flex items-center gap-3 text-blue-700 text-sm">
+                        <span className="w-5 h-5 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">
+                          {index + 1}
+                        </span>
+                        <span>{instruction}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Camera Preview */}
+              <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+                <video
+                  ref={videoRef}
+                  className="w-full h-full object-cover"
+                  playsInline
+                  muted
+                  autoPlay
+                />
+                
+                {isRecording && (
+                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold animate-pulse">
+                    🔴 RECORDING - {formatRecordingTime(recordingDuration)}
+                  </div>
+                )}
+
+                {!isRecording && recordedVideo && (
+                  <div className="absolute inset-0 bg-black/75 flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <div className="text-4xl mb-2">✅</div>
+                      <p className="text-lg font-semibold">Video Recorded!</p>
+                      <p className="text-sm opacity-75">Duration: {formatRecordingTime(recordingDuration)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Recording Controls */}
+              <div className="flex gap-3 justify-center">
+                {!isRecording && !recordedVideo && (
+                  <>
+                    <Button 
+                      onClick={() => {
+                        if (!cameraStream) {
+                          startCamera().then(() => startVideoRecording())
+                        } else {
+                          startVideoRecording()
+                        }
+                      }}
+                      className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 text-lg"
+                    >
+                      🎬 Start Recording
+                    </Button>
+                    <Button 
+                      onClick={() => setStep('instructions')}
+                      variant="outline"
+                    >
+                      ← Back
+                    </Button>
+                  </>
+                )}
+
+                {isRecording && (
+                  <Button 
+                    onClick={stopVideoRecording}
+                    className="bg-gray-800 hover:bg-gray-900 text-white px-8 py-3 text-lg"
+                  >
+                    ⏹️ Stop Recording
+                  </Button>
+                )}
+
+                {recordedVideo && (
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={analyzeContent}
+                      className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3"
+                    >
+                      🤖 Analyze Video
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setRecordedVideo('')
+                        setRecordingDuration(0)
+                      }}
+                      variant="outline"
+                    >
+                      🔄 Re-record
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Preview of recorded video */}
+              {recordedVideo && (
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-green-900 mb-2">📹 Recorded Video Preview</h4>
+                  <video 
+                    src={recordedVideo} 
+                    controls 
+                    className="w-full h-32 bg-black rounded object-cover"
+                  />
                 </div>
               )}
             </div>
