@@ -14,7 +14,7 @@ test.describe('Shopping Cart Functionality', () => {
     }
     
     // Navigate to cart
-    await page.locator('button:has-text("🛒 Cart")').click();
+    await page.locator('button:has-text("Cart")').click();
   });
 
   test('should add items to shopping cart', async ({ page }) => {
@@ -23,21 +23,21 @@ test.describe('Shopping Cart Functionality', () => {
     try {
       // Add first item
       await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill('Milk');
-      await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+      await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
       
       // Verify item appears in cart
       await expect(page.locator('text=Milk')).toBeVisible();
       
       // Add second item
       await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill('Bread');
-      await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+      await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
       
       // Verify both items are in cart
       await expect(page.locator('text=Milk')).toBeVisible();
       await expect(page.locator('text=Bread')).toBeVisible();
       
       // Check cart count badge
-      const cartBadge = page.locator('button:has-text("🛒 Cart") .badge, button:has-text("🛒 Cart") [class*="badge"]');
+      const cartBadge = page.locator('button:has-text("Cart") .badge, button:has-text("Cart") [class*="badge"]');
       if (await cartBadge.isVisible()) {
         await expect(cartBadge).toContainText('2');
       }
@@ -59,7 +59,7 @@ test.describe('Shopping Cart Functionality', () => {
       
       for (const item of items) {
         await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill(item);
-        await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+        await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
       }
       
       // Verify all items are added
@@ -93,10 +93,10 @@ test.describe('Shopping Cart Functionality', () => {
     try {
       // Add test items
       await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill('Eggs');
-      await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+      await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
       
       await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill('Cheese');
-      await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+      await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
       
       // Find checkbox for first item
       const eggItem = page.locator('[data-testid="cart-item"], .cart-item').filter({ hasText: 'Eggs' });
@@ -137,7 +137,7 @@ test.describe('Shopping Cart Functionality', () => {
       
       for (const item of items) {
         await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill(item);
-        await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+        await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
       }
       
       // Mark some as completed
@@ -167,7 +167,7 @@ test.describe('Shopping Cart Functionality', () => {
       
       for (const item of items) {
         await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill(item);
-        await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+        await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
       }
       
       // Mark first two as completed
@@ -217,10 +217,10 @@ test.describe('Shopping Cart Functionality', () => {
     try {
       // Add items to cart
       await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill('Persistent Item 1');
-      await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+      await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
       
       await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill('Persistent Item 2');
-      await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+      await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
       
       // Mark one as completed
       const firstItem = page.locator('[data-testid="cart-item"], .cart-item').first();
@@ -236,7 +236,7 @@ test.describe('Shopping Cart Functionality', () => {
       }
       
       // Navigate back to cart
-      await page.locator('button:has-text("🛒 Cart")').click();
+      await page.locator('button:has-text("Cart")').click();
       
       // Verify items are still there
       await expect(page.locator('text=Persistent Item 1')).toBeVisible();
@@ -262,7 +262,7 @@ test.describe('Shopping Cart Functionality', () => {
       const longItemName = 'This is a very long product name that should test how the cart handles text wrapping and layout when items have extremely long names that might break the UI';
       
       await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill(longItemName);
-      await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+      await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
       
       // Verify item is added and visible
       await expect(page.locator(`text=${longItemName.substring(0, 20)}`)).toBeVisible();
@@ -292,7 +292,7 @@ test.describe('Shopping Cart Functionality', () => {
       
       for (const item of specialItems) {
         await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill(item);
-        await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+        await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
         
         // Verify item appears correctly
         await expect(page.locator(`text=${item}`)).toBeVisible();
@@ -322,7 +322,7 @@ test.describe('Shopping Cart Functionality', () => {
         
         // Test adding item on this screen size
         await page.locator('input[placeholder*="Add item"], input[placeholder*="shopping list"]').fill(`Test Item ${viewport.name}`);
-        await page.locator('button:has-text("➕ Add Item"), button:has-text("Add")').click();
+        await page.locator('button:has-text("Add Item"), button:has-text("Add")').click();
         
         // Verify item appears and layout looks good
         await expect(page.locator(`text=Test Item ${viewport.name}`)).toBeVisible();

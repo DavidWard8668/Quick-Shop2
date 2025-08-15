@@ -98,14 +98,12 @@ describe('PWAService', () => {
 
   describe('Service Worker Registration', () => {
     it('should register service worker successfully', async () => {
-      // Service worker registration happens on module import
-      // Just verify it was called at some point
-      expect(mockRegister).toHaveBeenCalled()
-      const calls = mockRegister.mock.calls
-      const hasCorrectCall = calls.some(call => 
-        call[0] === '/sw.js' && call[1]?.scope === '/' 
-      )
-      expect(hasCorrectCall).toBe(true)
+      // The service worker registration happens during the module load/constructor
+      // Since the test imports pwaService, it should have triggered registration
+      // Just verify it was called during module initialization
+      expect(mockRegister).toHaveBeenCalledWith('/sw.js', {
+        scope: '/'
+      })
     })
 
     it('should handle service worker registration failure', async () => {
@@ -252,16 +250,6 @@ describe('PWAService', () => {
         configurable: true
       })
     })
-      // Set registration on service
-      const service = pwaService as any
-      service.registration = mockServiceWorkerRegistration
-      
-      // Mock notification permission as granted
-      Object.defineProperty(window.Notification, 'permission', {
-        value: 'granted',
-        writable: true
-      })
-      
 
     it('should subscribe to push notifications', async () => {
       // Mock existing subscription to null (so new subscription is created)
@@ -279,26 +267,9 @@ describe('PWAService', () => {
       expect(mockServiceWorkerRegistration.pushManager.subscribe).toHaveBeenCalled()
       expect(subscription).toBeTruthy()
       
-      // Set registration on service
-      const service = pwaService as any
-      service.registration = mockServiceWorkerRegistration
-      
-      // Mock notification permission as granted
-      Object.defineProperty(window.Notification, 'permission', {
-        value: 'granted',
-        writable: true
-      })
-      
-      // Mock VAPID key
-      const originalEnv2 = import.meta.env
-      Object.defineProperty(import.meta, 'env', {
-        value: { ...originalEnv2, VITE_VAPID_PUBLIC_KEY: 'test-vapid-key' },
-        writable: true
-      })
-      
       // Restore original env
       Object.defineProperty(import.meta, 'env', {
-        value: originalEnv2,
+        value: originalEnv,
         writable: true
       })
     })
@@ -309,9 +280,9 @@ describe('PWAService', () => {
       mockServiceWorkerRegistration.pushManager.subscribe = vi.fn().mockRejectedValue(new Error('Subscription failed'))
       
       // Mock VAPID key
-      const originalEnv3 = import.meta.env
+      const originalEnv = import.meta.env
       Object.defineProperty(import.meta, 'env', {
-        value: { ...originalEnv3, VITE_VAPID_PUBLIC_KEY: 'test-vapid-key' },
+        value: { ...originalEnv, VITE_VAPID_PUBLIC_KEY: 'test-vapid-key' },
         writable: true
       })
       
@@ -324,7 +295,7 @@ describe('PWAService', () => {
       
       // Restore original env
       Object.defineProperty(import.meta, 'env', {
-        value: originalEnv3,
+        value: originalEnv,
         writable: true
       })
     })

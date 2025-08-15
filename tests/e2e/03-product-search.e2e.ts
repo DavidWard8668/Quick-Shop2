@@ -13,19 +13,19 @@ test.describe('Product Search with Fuzzy Matching', () => {
       await page.locator('button:has-text("Skip")').click();
     }
     
-    // Search for a store first
-    await page.locator('button:has-text("📍 Stores")').click();
+    // Search for a store first - updated selectors for current UI
+    await page.locator('button:has-text("Stores")').click();
     await page.locator('input[placeholder*="postcode"]').fill('M1 1AA');
-    await page.locator('button:has-text("🔍 Search")').click();
+    await page.locator('button:has-text("Search")').click();
     await waitForNetworkIdle(page);
     
     // Select first store if available
     const storesFound = await page.locator('[data-testid="store-card"]').count();
     if (storesFound > 0) {
-      await page.locator('[data-testid="store-card"]').first().locator('button:has-text("🛒 Shop Here")').click();
+      await page.locator('[data-testid="store-card"]').first().locator('button:has-text("Shop Here")').click();
     } else {
       // Navigate to navigate tab directly for testing
-      await page.locator('button:has-text("🧭 Navigate")').click();
+      await page.locator('button:has-text("Navigate")').click();
     }
   });
 
