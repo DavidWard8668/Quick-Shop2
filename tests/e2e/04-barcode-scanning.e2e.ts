@@ -20,7 +20,7 @@ test.describe('Barcode Scanning Simulation', () => {
     
     try {
       // Navigate to Navigate tab
-      await page.locator('button:has-text("🧭 Navigate")').click();
+      await page.locator('button:has-text("Navigate")').click();
       
       // Look for barcode scanner button
       const scannerButton = page.locator('button:has-text("📷"), button:has-text("barcode"), button:has-text("scan"), [data-testid="barcode-scanner"]').first();
@@ -55,7 +55,7 @@ test.describe('Barcode Scanning Simulation', () => {
       // Grant camera permission upfront
       await page.context().grantPermissions(['camera']);
       
-      await page.locator('button:has-text("🧭 Navigate")').click();
+      await page.locator('button:has-text("Navigate")').click();
       
       const scannerButton = page.locator('button:has-text("📷"), button:has-text("barcode"), button:has-text("scan")').first();
       
@@ -86,7 +86,7 @@ test.describe('Barcode Scanning Simulation', () => {
     
     try {
       await page.context().grantPermissions(['camera']);
-      await page.locator('button:has-text("🧭 Navigate")').click();
+      await page.locator('button:has-text("Navigate")').click();
       
       const scannerButton = page.locator('button:has-text("📷"), button:has-text("barcode"), button:has-text("scan")').first();
       
@@ -141,7 +141,7 @@ test.describe('Barcode Scanning Simulation', () => {
       // Deny camera permission to simulate error
       await page.context().clearPermissions();
       
-      await page.locator('button:has-text("🧭 Navigate")').click();
+      await page.locator('button:has-text("Navigate")').click();
       
       const scannerButton = page.locator('button:has-text("📷"), button:has-text("barcode"), button:has-text("scan")').first();
       
@@ -172,7 +172,7 @@ test.describe('Barcode Scanning Simulation', () => {
     
     try {
       await page.context().grantPermissions(['camera']);
-      await page.locator('button:has-text("🧭 Navigate")').click();
+      await page.locator('button:has-text("Navigate")').click();
       
       const scannerButton = page.locator('button:has-text("📷"), button:has-text("barcode"), button:has-text("scan")').first();
       
@@ -215,7 +215,7 @@ test.describe('Barcode Scanning Simulation', () => {
     
     try {
       await page.context().grantPermissions(['camera']);
-      await page.locator('button:has-text("🧭 Navigate")').click();
+      await page.locator('button:has-text("Navigate")').click();
       
       const scannerButton = page.locator('button:has-text("📷"), button:has-text("barcode"), button:has-text("scan")').first();
       
@@ -274,7 +274,7 @@ test.describe('Barcode Scanning Simulation', () => {
         await page.setViewportSize(orientation);
         await page.context().grantPermissions(['camera']);
         
-        await page.locator('button:has-text("🧭 Navigate")').click();
+        await page.locator('button:has-text("Navigate")').click();
         
         const scannerButton = page.locator('button:has-text("📷"), button:has-text("barcode"), button:has-text("scan")').first();
         
@@ -311,7 +311,7 @@ test.describe('Barcode Scanning Simulation', () => {
     
     try {
       await page.context().grantPermissions(['camera']);
-      await page.locator('button:has-text("🧭 Navigate")').click();
+      await page.locator('button:has-text("Navigate")').click();
       
       const scannerButton = page.locator('button:has-text("📷"), button:has-text("barcode"), button:has-text("scan")').first();
       

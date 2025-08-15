@@ -14,7 +14,7 @@ test.describe('Store Search and Selection', () => {
     }
     
     // Navigate to stores tab
-    await page.locator('button:has-text("📍 Stores")').click();
+    await page.locator('button:has-text("Stores")').click();
   });
 
   test('should find stores using GPS location', async ({ page }) => {
@@ -22,7 +22,7 @@ test.describe('Store Search and Selection', () => {
     
     try {
       // Click "Use My Location" button
-      await page.locator('button:has-text("📍 Use My Location")').click();
+      await page.locator('button:has-text("Use My Location")').click();
       
       // Wait for loading spinner
       await expect(page.locator('text=Locating...')).toBeVisible();
@@ -60,11 +60,11 @@ test.describe('Store Search and Selection', () => {
     try {
       // Enter a UK postcode
       await page.locator('input[placeholder*="postcode"]').fill('M1 1AA');
-      await page.locator('button:has-text("🔍 Search")').click();
+      await page.locator('button:has-text("Search")').click();
       
       // Wait for search to complete
       await waitForNetworkIdle(page);
-      await expect(page.locator('button:has-text("🔍 Search")').filter({ hasText: /^(?!.*Searching)/ })).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('button:has-text("Search")').filter({ hasText: /^(?!.*Searching)/ })).toBeVisible({ timeout: 10000 });
       
       // Should show stores or no stores message
       const storesFound = await page.locator('[data-testid="store-card"]').count();
@@ -88,7 +88,7 @@ test.describe('Store Search and Selection', () => {
     try {
       // Enter invalid postcode
       await page.locator('input[placeholder*="postcode"]').fill('INVALID123');
-      await page.locator('button:has-text("🔍 Search")').click();
+      await page.locator('button:has-text("Search")').click();
       
       // Should show error message
       await expect(page.locator('text=Unable to find that postcode')).toBeVisible({ timeout: 10000 });
@@ -105,7 +105,7 @@ test.describe('Store Search and Selection', () => {
     try {
       // Search for stores
       await page.locator('input[placeholder*="postcode"]').fill('M1 1AA');
-      await page.locator('button:has-text("🔍 Search")').click();
+      await page.locator('button:has-text("Search")').click();
       await waitForNetworkIdle(page);
       
       // Check if stores are found
@@ -120,7 +120,7 @@ test.describe('Store Search and Selection', () => {
         
         // Check for action buttons
         await expect(storeCard.locator('button:has-text("🧭 Navigate Here")')).toBeVisible();
-        await expect(storeCard.locator('button:has-text("🛒 Shop Here")')).toBeVisible();
+        await expect(storeCard.locator('button:has-text("Shop Here")')).toBeVisible();
         await expect(storeCard.locator('button:has-text("🤖 AI Map Store")')).toBeVisible();
         
         // Check for favorite button (heart or white heart)
@@ -149,14 +149,14 @@ test.describe('Store Search and Selection', () => {
     try {
       // Search for stores
       await page.locator('input[placeholder*="postcode"]').fill('M1 1AA');
-      await page.locator('button:has-text("🔍 Search")').click();
+      await page.locator('button:has-text("Search")').click();
       await waitForNetworkIdle(page);
       
       const storesFound = await page.locator('[data-testid="store-card"]').count();
       
       if (storesFound > 0) {
         // Click "Shop Here" on first store
-        await page.locator('[data-testid="store-card"]').first().locator('button:has-text("🛒 Shop Here")').click();
+        await page.locator('[data-testid="store-card"]').first().locator('button:has-text("Shop Here")').click();
         
         // Should navigate to Navigate tab
         await expect(page.locator('button:has-text("🧭 Navigate")').filter({ hasClass: /emerald/ })).toBeVisible();
@@ -182,7 +182,7 @@ test.describe('Store Search and Selection', () => {
     try {
       // Search for stores
       await page.locator('input[placeholder*="postcode"]').fill('M1 1AA');
-      await page.locator('button:has-text("🔍 Search")').click();
+      await page.locator('button:has-text("Search")').click();
       await waitForNetworkIdle(page);
       
       const storesFound = await page.locator('[data-testid="store-card"]').count();
@@ -217,7 +217,7 @@ test.describe('Store Search and Selection', () => {
     try {
       // First search
       await page.locator('input[placeholder*="postcode"]').fill('M1 1AA');
-      await page.locator('button:has-text("🔍 Search")').click();
+      await page.locator('button:has-text("Search")').click();
       await waitForNetworkIdle(page);
       
       // Click refresh button
@@ -244,7 +244,7 @@ test.describe('Store Search and Selection', () => {
     try {
       // Search for stores
       await page.locator('input[placeholder*="postcode"]').fill('M1 1AA');
-      await page.locator('button:has-text("🔍 Search")').click();
+      await page.locator('button:has-text("Search")').click();
       await waitForNetworkIdle(page);
       
       const storesFound = await page.locator('[data-testid="store-card"]').count();
@@ -292,13 +292,13 @@ test.describe('Store Search and Selection', () => {
         await page.setViewportSize(viewport);
         
         // Verify main elements are visible and usable
-        await expect(page.locator('button:has-text("📍 Use My Location")')).toBeVisible();
+        await expect(page.locator('button:has-text("Use My Location")')).toBeVisible();
         await expect(page.locator('input[placeholder*="postcode"]')).toBeVisible();
-        await expect(page.locator('button:has-text("🔍 Search")')).toBeVisible();
+        await expect(page.locator('button:has-text("Search")')).toBeVisible();
         
         // Test postcode search on this viewport
         await page.locator('input[placeholder*="postcode"]').fill('M1 1AA');
-        await page.locator('button:has-text("🔍 Search")').click();
+        await page.locator('button:has-text("Search")').click();
         
         await waitForNetworkIdle(page);
         

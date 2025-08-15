@@ -59,48 +59,113 @@ describe('CartPilot', () => {
     render(<CartPilot />)
     
     expect(screen.getByText('CARTPILOT')).toBeInTheDocument()
-    expect(screen.getByText(/Your guide to stress free shopping/i)).toBeInTheDocument()
+    expect(screen.getByText('Your guide to stress free shopping')).toBeInTheDocument()
   })
 
   it('displays navigation tabs', () => {
     render(<CartPilot />)
     
-    // Look for button elements containing the text (handles multiple spans for responsive design)
-    expect(screen.getByRole('button', { name: /stores/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /navigate/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /cart/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /pilot/i })).toBeInTheDocument()
+    expect(screen.getByText('📍 Stores')).toBeInTheDocument()
+    expect(screen.getByText('🧭 Navigate')).toBeInTheDocument()
+    expect(screen.getByText('🛒 Cart')).toBeInTheDocument()
+    expect(screen.getByText('👨‍✈️ Pilot')).toBeInTheDocument()
   })
 
   it('starts on stores tab by default', () => {
     render(<CartPilot />)
     
-    expect(screen.getByRole('heading', { name: /Find.*Partner Stores/i })).toBeInTheDocument()
+    expect(screen.getByText('🔍 Find CartPilot Partner Stores')).toBeInTheDocument()
+    expect(screen.getByText('📍 Use My Location')).toBeInTheDocument()
   })
 
   it('can switch between tabs', async () => {
     render(<CartPilot />)
     
-    fireEvent.click(screen.getByRole('button', { name: /cart/i }))
+    // Switch to cart tab
+    fireEvent.click(screen.getByText('🛒 Cart'))
     
     await waitFor(() => {
-      expect(screen.getByText(/Shopping List/i)).toBeInTheDocument()
+      expect(screen.getByText('🛒 Smart Shopping List')).toBeInTheDocument()
     })
   })
 
   it('shows sign in button when not authenticated', () => {
     render(<CartPilot />)
     
-    expect(screen.getByText('Sign In')).toBeInTheDocument()
+    expect(screen.getByText('🔑 Sign In')).toBeInTheDocument()
   })
 
   it('can add items to shopping cart', async () => {
     render(<CartPilot />)
     
-    fireEvent.click(screen.getByRole('button', { name: /cart/i }))
+    // Switch to cart tab
+    fireEvent.click(screen.getByText('🛒 Cart'))
+    
+    // Find the input and add button
+    const input = screen.getByPlaceholderText('Add item to shopping list...')
+    const addButton = screen.getByText('➕ Add Item')
+    
+    // Add an item
+    fireEvent.change(input, { target: { value: 'Milk' } })
+    fireEvent.click(addButton)
     
     await waitFor(() => {
-      expect(screen.getByText(/Shopping List/i)).toBeInTheDocument()
+      expect(screen.getByText('Milk')).toBeInTheDocument()
+    })
+  })
+
+  it('shows PWA install banner', () => {
+    render(<CartPilot />)
+    
+    expect(screen.getByText('📱 Install CartPilot')).toBeInTheDocument()
+    expect(screen.getByText('Get quick access from your home screen')).toBeInTheDocument()
+  })
+
+  it('can handle location search', async () => {
+    const { getCurrentLocation } = await import('../../services/storeDataService')
+    
+    render(<CartPilot />)
+    
+    const locationButton = screen.getByText('📍 Use My Location')
+    fireEvent.click(locationButton)
+    
+    await waitFor(() => {
+      expect(getCurrentLocation).toHaveBeenCalled()
     })
   })
 })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

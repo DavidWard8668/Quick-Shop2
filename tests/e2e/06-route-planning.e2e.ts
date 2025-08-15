@@ -14,12 +14,12 @@ test.describe('Route Planning', () => {
     }
     
     // Add items to cart first
-    await page.locator('button:has-text("🛒 Cart")').click();
+    await page.locator('button:has-text("Cart")').click();
     const testItems = ['Milk', 'Bread', 'Eggs', 'Cheese'];
     
     for (const item of testItems) {
       await page.locator('input[placeholder*="Add item"]').fill(item);
-      await page.locator('button:has-text("➕ Add Item")').click();
+      await page.locator('button:has-text("Add Item")').click();
     }
   });
 

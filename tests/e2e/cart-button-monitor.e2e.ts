@@ -5,7 +5,7 @@ test('Monitor Cart button click behavior with detailed logging', async ({ page }
   await page.goto('http://localhost:5175')
   
   // Wait for the app to load - look for the navigation buttons
-  await page.waitForSelector('button:has-text("🏪 Stores")', { timeout: 10000 })
+  await page.waitForSelector('button:has-text("Stores")', { timeout: 10000 })
   
   // Add console listener to capture React state changes
   page.on('console', msg => {
@@ -20,24 +20,24 @@ test('Monitor Cart button click behavior with detailed logging', async ({ page }
   })
 
   // Check initial state
-  const initialActiveButton = await page.locator('button:has-text("🏪 Stores")').getAttribute('class')
+  const initialActiveButton = await page.locator('button:has-text("Stores")').getAttribute('class')
   console.log('Initial Stores button classes:', initialActiveButton)
   
-  const initialCartButton = await page.locator('button:has-text("🛒 Cart")').getAttribute('class')
+  const initialCartButton = await page.locator('button:has-text("Cart")').getAttribute('class')
   console.log('Initial Cart button classes:', initialCartButton)
 
   // Click the Cart button and monitor what happens
   console.log('\n=== CLICKING CART BUTTON ===')
-  await page.locator('button:has-text("🛒 Cart")').click()
+  await page.locator('button:has-text("Cart")').click()
   
   // Wait a moment to see if state changes
   await page.waitForTimeout(1000)
   
   // Check if Cart tab is active
-  const cartButtonAfterClick = await page.locator('button:has-text("🛒 Cart")').getAttribute('class')
+  const cartButtonAfterClick = await page.locator('button:has-text("Cart")').getAttribute('class')
   console.log('Cart button classes after click:', cartButtonAfterClick)
   
-  const storesButtonAfterClick = await page.locator('button:has-text("🏪 Stores")').getAttribute('class')
+  const storesButtonAfterClick = await page.locator('button:has-text("Stores")').getAttribute('class')
   console.log('Stores button classes after click:', storesButtonAfterClick)
 
   // Check if Cart content is visible
@@ -52,10 +52,10 @@ test('Monitor Cart button click behavior with detailed logging', async ({ page }
   await page.waitForTimeout(3000)
   
   // Check final state
-  const finalCartButton = await page.locator('button:has-text("🛒 Cart")').getAttribute('class')
+  const finalCartButton = await page.locator('button:has-text("Cart")').getAttribute('class')
   console.log('Final Cart button classes:', finalCartButton)
   
-  const finalStoresButton = await page.locator('button:has-text("🏪 Stores")').getAttribute('class')
+  const finalStoresButton = await page.locator('button:has-text("Stores")').getAttribute('class')
   console.log('Final Stores button classes:', finalStoresButton)
 
   const finalCartContentVisible = await page.locator('text=Add items to your shopping cart').isVisible()

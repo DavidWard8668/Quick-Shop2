@@ -13,9 +13,9 @@ test.describe('AI Store Mapping Flow', () => {
     }
     
     // Search for stores
-    await page.locator('button:has-text("📍 Stores")').click();
+    await page.locator('button:has-text("Stores")').click();
     await page.locator('input[placeholder*="postcode"]').fill('M1 1AA');
-    await page.locator('button:has-text("🔍 Search")').click();
+    await page.locator('button:has-text("Search")').click();
     await waitForNetworkIdle(page);
   });
 
@@ -27,7 +27,7 @@ test.describe('AI Store Mapping Flow', () => {
       
       if (storesFound > 0) {
         // Look for AI mapping button
-        const aiMappingButton = page.locator('button:has-text("🤖 AI Map Store")').first();
+        const aiMappingButton = page.locator('button:has-text("AI Map Store")').first();
         
         if (await aiMappingButton.isVisible()) {
           await aiMappingButton.click();
