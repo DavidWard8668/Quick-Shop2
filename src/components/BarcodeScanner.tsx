@@ -137,30 +137,42 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   }
 
   const startCamera = async () => {
-
-  // Camera access helper
-  const requestCameraAccess = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }, 
-        audio: false 
-      });
-      return stream;
-    } catch (error) {
-      console.error('Camera access denied:', error);
-      throw error;
-    }
-  };
     try {
       setError('')
       setIsScanning(true)
       scanningRef.current = true
       
-      // Initialize barcode reader
-      codeReaderRef.current = new BrowserMultiFormatReader()
+      // Check if browser supports camera access
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported on this device')
+      }
       
-      // Request camera permission and start scanning
-      const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices()
+      // Initialize barcode reader with error handling
+      try {
+        codeReaderRef.current = new BrowserMultiFormatReader()
+      } catch (initError) {
+        console.error('Failed to initialize barcode reader:', initError)
+        throw new Error('Barcode scanner initialization failed')
+      }
+      
+      // Request camera permission with better error handling for Android
+      let videoInputDevices = []
+      try {
+        videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices()
+      } catch (listError) {
+        console.error('Failed to list video devices:', listError)
+        // Try direct getUserMedia as fallback
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: { ideal: 'environment' } }, 
+          audio: false 
+        })
+        streamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+        videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices()
+      }
+      
       const backCamera = videoInputDevices.find(device => 
         device.label.toLowerCase().includes('back') || 
         device.label.toLowerCase().includes('rear') ||
@@ -170,46 +182,61 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
       if (videoRef.current) {
         setHasPermission(true)
         
-        // Start continuous scanning
-        codeReaderRef.current.decodeFromVideoDevice(
-          backCamera?.deviceId,
-          videoRef.current,
-          (result, error) => {
-            if (result && scanningRef.current) {
-              const barcode = result.getText()
-              console.log('✅ Barcode detected:', barcode)
-              handleBarcodeDetected(barcode)
-              scanningRef.current = false // Stop scanning after first successful scan
+        // Start continuous scanning with Android-specific error handling
+        try {
+          await codeReaderRef.current.decodeFromVideoDevice(
+            backCamera?.deviceId,
+            videoRef.current,
+            (result, error) => {
+              if (result && scanningRef.current) {
+                const barcode = result.getText()
+                console.log('✅ Barcode detected:', barcode)
+                handleBarcodeDetected(barcode)
+                scanningRef.current = false // Stop scanning after first successful scan
+              }
+              if (error && !(error instanceof NotFoundException) && 
+                  !(error instanceof ChecksumException) && 
+                  !(error instanceof FormatException)) {
+                console.warn('Scanning error (non-critical):', error.message || error)
+              }
             }
-            if (error && !(error instanceof NotFoundException)) {
-              console.error('Scanning error:', error)
-            }
+          )
+        } catch (decodeError) {
+          console.error('Failed to start decoder:', decodeError)
+          // Fallback: Try manual stream handling for Android
+          if (streamRef.current && videoRef.current) {
+            videoRef.current.srcObject = streamRef.current
+            setError('Auto-scan unavailable. Please use manual entry or try again.')
+          } else {
+            throw decodeError
           }
-        )
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error accessing camera:', err)
-      setError('Camera access denied or not available. Please allow camera permissions.')
+      
+      // Provide specific error messages for common Android issues
+      let errorMessage = 'Camera access denied or not available.'
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMessage = 'Camera permission denied. Please allow camera access in your browser settings.'
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage = 'No camera found. Please ensure your device has a camera.'
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMessage = 'Camera is already in use by another app. Please close other camera apps and try again.'
+      } else if (err.message?.includes('secure')) {
+        errorMessage = 'Camera requires HTTPS. Please use the secure version of this app.'
+      } else if (err.message?.includes('initialize')) {
+        errorMessage = 'Barcode scanner failed to start. Please use manual entry or try refreshing the page.'
+      }
+      
+      setError(errorMessage)
       setHasPermission(false)
       setIsScanning(false)
     }
   }
 
   const stopCamera = () => {
-
-  // Camera access helper
-  const requestCameraAccess = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }, 
-        audio: false 
-      });
-      return stream;
-    } catch (error) {
-      console.error('Camera access denied:', error);
-      throw error;
-    }
-  };
     scanningRef.current = false
     if (codeReaderRef.current) {
       codeReaderRef.current.reset()
@@ -222,20 +249,6 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   }
 
   const handleManualEntry = () => {
-
-  // Camera access helper
-  const requestCameraAccess = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }, 
-        audio: false 
-      });
-      return stream;
-    } catch (error) {
-      console.error('Camera access denied:', error);
-      throw error;
-    }
-  };
     const barcode = prompt('Enter barcode manually (12-13 digits):')
     if (barcode && /^\d{12,13}$/.test(barcode)) {
       handleBarcodeDetected(barcode)
