@@ -155,22 +155,53 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
         throw new Error('Barcode scanner initialization failed')
       }
       
-      // Request camera permission with better error handling for Android
-      let videoInputDevices = []
+      // Request camera permission FIRST before listing devices
+      console.log('🎥 Requesting camera permission...')
+      let stream: MediaStream
       try {
-        videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices()
-      } catch (listError) {
-        console.error('Failed to list video devices:', listError)
-        // Try direct getUserMedia as fallback
-        const stream = await navigator.mediaDevices.getUserMedia({ 
+        // Always request permission first - this triggers the browser permission prompt
+        stream = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: { ideal: 'environment' } }, 
           audio: false 
         })
         streamRef.current = stream
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
+        console.log('✅ Camera permission granted')
+        
+        // Now we can safely list devices after permission is granted
+        const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices()
+        console.log(`📱 Found ${videoInputDevices.length} video devices`)
+        
+        // Stop the temporary stream before setting up the scanner
+        stream.getTracks().forEach(track => track.stop())
+        streamRef.current = null
+        
+      } catch (permissionError) {
+        console.error('Camera permission denied:', permissionError)
+        
+        // Provide specific guidance based on error type
+        let permissionMessage = 'Camera permission is required to scan barcodes.'
+        if (permissionError.name === 'NotAllowedError') {
+          permissionMessage = 'Camera access denied. Please click the camera icon in your browser\'s address bar and allow camera access, then try again.'
+        } else if (permissionError.name === 'NotFoundError') {
+          permissionMessage = 'No camera found on this device. Please ensure you have a working camera.'
         }
+        
+        setError(permissionMessage)
+        setHasPermission(false)
+        setIsScanning(false)
+        return
+      }
+      
+      // Get video devices again after permission is confirmed
+      let videoInputDevices = []
+      try {
         videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices()
+      } catch (listError) {
+        console.error('Failed to list video devices after permission:', listError)
+        setError('Failed to access camera devices. Please try refreshing the page.')
+        setHasPermission(false)
+        setIsScanning(false)
+        return
       }
       
       const backCamera = videoInputDevices.find(device => 
