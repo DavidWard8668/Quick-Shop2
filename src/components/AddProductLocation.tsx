@@ -51,6 +51,13 @@ export const AddProductLocation: React.FC<AddProductLocationProps> = ({
   // Start camera for preview
   const startCamera = async () => {
     try {
+      console.log('📷 Starting camera for shop recording...')
+      
+      // Check if browser supports camera access
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported on this device')
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'environment',
@@ -59,18 +66,39 @@ export const AddProductLocation: React.FC<AddProductLocationProps> = ({
         } 
       })
       
+      console.log('✅ Camera permission granted for shop recording')
       setCameraStream(stream)
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         videoRef.current.onloadedmetadata = () => {
+          console.log('📱 Camera preview ready')
           setIsCameraReady(true)
           setStep('camera_preview')
         }
+        
+        // Handle video loading errors
+        videoRef.current.onerror = (e) => {
+          console.error('Video preview error:', e)
+          stopCamera()
+          setStep('product')
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing camera:', error)
-      alert('Camera access denied. You can still add the product location manually.')
-      setStep('product')
+      
+      // Provide specific guidance based on error type
+      let errorMessage = 'Camera access is required to take photos of products and aisles.'
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Camera access denied. Please click the camera icon in your browser\'s address bar and allow camera access, then try the camera button again.'
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = 'No camera found on this device. You can still add product locations manually.'
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = 'Camera not supported on this device. You can add product locations manually.'
+      }
+      
+      alert(errorMessage)
+      setStep('product') // Skip to manual entry
     }
   }
 
