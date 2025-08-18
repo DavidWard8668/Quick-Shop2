@@ -246,6 +246,7 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
     return (
       <div 
         className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto"
+        data-testid="user-tutorial"
         data-tutorial-modal="true"
         onClick={(e) => {
           // Close if clicking the backdrop
@@ -358,6 +359,7 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
   return (
     <div 
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto"
+      data-testid="user-tutorial"
       data-tutorial-modal="true"
       onClick={(e) => {
         // Close if clicking the backdrop
