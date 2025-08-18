@@ -950,3 +950,80 @@ export const fixCorruptedStoreCoordinates = async (): Promise<void> => {
     console.error('❌ Error during coordinate cleanup:', error)
   }
 }
+
+// Store coordinate corrections for known problem locations
+const STORE_CORRECTIONS = {
+  'ASDA Leith': {
+    lat: 55.9726, // Correct latitude for Edinburgh Leith area
+    lng: -3.1683, // Correct longitude for Edinburgh Leith area  
+    address: 'The Foot of the Walk, Leith, Edinburgh EH6 8RQ',
+    postcode: 'EH6 8RQ',
+    chain: 'ASDA'
+  },
+  'ASDA Leith Superstore': {
+    lat: 55.9726,
+    lng: -3.1683,
+    address: 'The Foot of the Walk, Leith, Edinburgh EH6 8RQ', 
+    postcode: 'EH6 8RQ',
+    chain: 'ASDA'
+  },
+  'Asda Leith': {
+    lat: 55.9726,
+    lng: -3.1683,
+    address: 'The Foot of the Walk, Leith, Edinburgh EH6 8RQ', 
+    postcode: 'EH6 8RQ',
+    chain: 'ASDA'
+  }
+}
+
+// Apply known coordinate corrections for specific stores
+export const applyStoreCorrections = async (): Promise<void> => {
+  try {
+    console.log('🔧 Applying store coordinate corrections...')
+    
+    for (const [storeName, corrections] of Object.entries(STORE_CORRECTIONS)) {
+      console.log(`📍 Checking for ${storeName}...`)
+      
+      // Find stores that match this name (case insensitive)
+      const { data: stores, error } = await supabase
+        .from('stores')
+        .select('*')
+        .ilike('name', `%${storeName}%`)
+      
+      if (error) {
+        console.error(`Error finding ${storeName}:`, error)
+        continue
+      }
+      
+      if (!stores || stores.length === 0) {
+        console.log(`ℹ️ Store ${storeName} not found in database, skipping`)
+        continue
+      }
+      
+      // Update each matching store
+      for (const store of stores) {
+        const { error: updateError } = await supabase
+          .from('stores')
+          .update({
+            lat: corrections.lat,
+            lng: corrections.lng,
+            address: corrections.address,
+            postcode: corrections.postcode,
+            chain: corrections.chain
+          })
+          .eq('id', store.id)
+        
+        if (updateError) {
+          console.error(`Failed to update ${store.name}:`, updateError)
+        } else {
+          console.log(`✅ Updated ${store.name} coordinates: ${corrections.lat}, ${corrections.lng}`)
+        }
+      }
+    }
+    
+    console.log('🎯 Store coordinate corrections complete!')
+    
+  } catch (error) {
+    console.error('❌ Error applying store corrections:', error)
+  }
+}
