@@ -7,7 +7,7 @@ export default defineConfig({
   testDir: './tests',
   
   /* Run tests in files in parallel */
-  fullyParallel: true,
+  fullyParallel: false, // Disable to prevent EPIPE issues
   
   /* Fail the build on CI if you accidentally left test.only in the source code */
   forbidOnly: !!process.env.CI,
@@ -16,14 +16,12 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   
   /* Opt out of parallel tests on CI */
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1, // Use single worker to prevent EPIPE issues
   
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
-    ['json', { outputFile: 'test-results/results.json' }],
-    ['junit', { outputFile: 'test-results/junit.xml' }],
-    ['allure-playwright', { outputFolder: 'allure-results' }]
+    ['list'], // Simple list reporter to avoid EPIPE issues
+    ['html', { outputFolder: 'playwright-report', open: 'never' }]
   ],
   
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions */

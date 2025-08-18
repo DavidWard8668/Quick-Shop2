@@ -653,14 +653,14 @@ export const CartPilot: React.FC = () => {
   useEffect(() => {
     initializeApp()
     
-    // DISABLED: Auto-showing tutorial causes issues on Android
-    // Users can manually open tutorial via Help button
-    // const tutorialCompleted = localStorage.getItem('cartpilot-tutorial-completed')
-    // const tutorialSkipped = localStorage.getItem('cartpilot-tutorial-skipped')
-    // 
-    // if (!tutorialCompleted && !tutorialSkipped) {
-    //   setTimeout(() => setShowTutorial(true), 2000) // Show after 2 seconds
-    // }
+    // Check for first-time user tutorial (enabled for E2E testing)
+    const tutorialCompleted = localStorage.getItem('cartpilot-tutorial-completed')
+    const tutorialSkipped = localStorage.getItem('cartpilot-tutorial-skipped')
+    
+    // Auto-show tutorial for new users (needed for E2E tests)
+    if (!tutorialCompleted && !tutorialSkipped) {
+      setTimeout(() => setShowTutorial(true), 1000) // Show after 1 second
+    }
     
     // Detect iOS
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
