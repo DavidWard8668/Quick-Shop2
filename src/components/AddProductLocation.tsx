@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import { claudeVisionService, type AnalysisResult } from '../services/claudeVisionService'
 import { Textarea } from './ui/textarea'
 import { Badge } from './ui/badge'
 import { BarcodeScanner } from './BarcodeScanner'
@@ -36,6 +37,9 @@ export const AddProductLocation: React.FC<AddProductLocationProps> = ({
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const [isCameraReady, setIsCameraReady] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
+  const [capturedFile, setCapturedFile] = useState<File | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -111,8 +115,8 @@ export const AddProductLocation: React.FC<AddProductLocationProps> = ({
     setIsCameraReady(false)
   }
 
-  // Capture photo from camera preview
-  const capturePhoto = () => {
+  // Capture photo from camera preview and analyze with Claude
+  const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current && isCameraReady) {
       const video = videoRef.current
       const canvas = canvasRef.current
@@ -125,9 +129,60 @@ export const AddProductLocation: React.FC<AddProductLocationProps> = ({
         ctx.drawImage(video, 0, 0)
         const imageData = canvas.toDataURL('image/jpeg', 0.8)
         setAislePhoto(imageData)
+        
+        // Convert to File for Claude analysis
+        const response = await fetch(imageData)
+        const blob = await response.blob()
+        const file = new File([blob], 'aisle-photo.jpg', { type: 'image/jpeg' })
+        setCapturedFile(file)
+        
         stopCamera()
         setStep('product')
+        
+        // Start Claude Vision analysis
+        await analyzePhotoWithClaude(file)
       }
+    }
+  }
+
+  // Analyze photo with Claude Vision
+  const analyzePhotoWithClaude = async (file: File) => {
+    setIsAnalyzing(true)
+    try {
+      console.log('🔍 Starting Claude Vision analysis...')
+      const result = await claudeVisionService.analyzeStorePhoto(file)
+      setAnalysisResult(result)
+      
+      if (result.success && result.data) {
+        const analysis = result.data
+        
+        // Auto-fill form fields from Claude analysis
+        if (analysis.aisleNumber) {
+          setAisle(analysis.aisleNumber)
+        }
+        
+        // If Claude found products, suggest the most confident one
+        if (analysis.products && analysis.products.length > 0) {
+          const bestProduct = analysis.products.reduce((best, current) => 
+            current.confidence > best.confidence ? current : best
+          )
+          
+          if (bestProduct.confidence > 0.7) {
+            setProductName(bestProduct.name)
+            setSection(`${bestProduct.position} side, ${bestProduct.shelfLevel} shelf`)
+          }
+        }
+        
+        console.log(`✨ Claude Vision: Found ${analysis.products?.length || 0} products, cost: $${result.cost?.toFixed(4)}`)
+      }
+    } catch (error) {
+      console.error('Claude analysis failed:', error)
+      setAnalysisResult({
+        success: false,
+        error: 'Analysis failed. You can still enter details manually.'
+      })
+    } finally {
+      setIsAnalyzing(false)
     }
   }
 
@@ -341,6 +396,78 @@ export const AddProductLocation: React.FC<AddProductLocationProps> = ({
                         📷 Retake
                       </Button>
                     </div>
+                  </div>
+                )}
+
+                {/* Claude Vision Analysis */}
+                {isAnalyzing && (
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                      <h4 className="font-semibold text-blue-900">🤖 AI Analysis in Progress...</h4>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      Claude is analyzing your photo to identify products and aisle information.
+                    </p>
+                  </div>
+                )}
+
+                {analysisResult && !isAnalyzing && (
+                  <div className={`p-4 rounded-lg ${analysisResult.success ? 'bg-emerald-50' : 'bg-orange-50'}`}>
+                    <h4 className={`font-semibold mb-2 ${analysisResult.success ? 'text-emerald-900' : 'text-orange-900'}`}>
+                      {analysisResult.success ? '🎯 AI Analysis Complete!' : '⚠️ Analysis Note'}
+                    </h4>
+                    
+                    {analysisResult.success && analysisResult.data ? (
+                      <div className="space-y-2 text-sm">
+                        {analysisResult.data.aisleNumber && (
+                          <p className="text-emerald-700">
+                            📍 <strong>Aisle:</strong> {analysisResult.data.aisleNumber}
+                            {analysisResult.data.aisleDescription && ` (${analysisResult.data.aisleDescription})`}
+                          </p>
+                        )}
+                        
+                        {analysisResult.data.storeChain && (
+                          <p className="text-emerald-700">
+                            🏪 <strong>Store:</strong> {analysisResult.data.storeChain}
+                          </p>
+                        )}
+                        
+                        {analysisResult.data.products && analysisResult.data.products.length > 0 && (
+                          <div className="text-emerald-700">
+                            <p><strong>🛒 Products Found ({analysisResult.data.products.length}):</strong></p>
+                            <div className="ml-4 space-y-1">
+                              {analysisResult.data.products.slice(0, 3).map((product, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {Math.round(product.confidence * 100)}% sure
+                                  </Badge>
+                                  <span>{product.name}</span>
+                                  <span className="text-xs text-emerald-600">
+                                    ({product.position} side, {product.shelfLevel})
+                                  </span>
+                                </div>
+                              ))}
+                              {analysisResult.data.products.length > 3 && (
+                                <p className="text-xs text-emerald-600">
+                                  +{analysisResult.data.products.length - 3} more products detected
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {analysisResult.cost && (
+                          <p className="text-emerald-600 text-xs">
+                            💰 Analysis cost: ${analysisResult.cost.toFixed(4)}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className={`text-sm ${analysisResult.success ? 'text-emerald-700' : 'text-orange-700'}`}>
+                        {analysisResult.error || 'No products detected in this photo.'}
+                      </p>
+                    )}
                   </div>
                 )}
                 
