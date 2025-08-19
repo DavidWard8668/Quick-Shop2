@@ -157,7 +157,7 @@ export const UserTutorial: React.FC<UserTutorialProps> = ({
   isOpen 
 }) => {
   const [currentStep, setCurrentStep] = useState(1)
-  const [showQuickStart, setShowQuickStart] = useState(true)
+  const [showQuickStart, setShowQuickStart] = useState(false)
   const [showVideo, setShowVideo] = useState(false)
 
   // Add keyboard escape handler for better accessibility
