@@ -17,21 +17,21 @@ export interface StoreData {
   distance?: number
 }
 
-// Overpass API query for grocery stores
-const buildOverpassQuery = (lat: number, lng: number, radius: number = 8000) => {
+// Overpass API query for major supermarkets only (no convenience stores)
+const buildOverpassQuery = (lat: number, lng: number, radius: number = 12000) => {
   return `
     [out:json][timeout:25];
     (
-      node["shop"~"^(supermarket|convenience)$"](around:${radius},${lat},${lng});
-      way["shop"~"^(supermarket|convenience)$"](around:${radius},${lat},${lng});
-      relation["shop"~"^(supermarket|convenience)$"](around:${radius},${lat},${lng});
+      node["shop"="supermarket"](around:${radius},${lat},${lng});
+      way["shop"="supermarket"](around:${radius},${lat},${lng});
+      relation["shop"="supermarket"](around:${radius},${lat},${lng});
     );
     out center meta;
   `
 }
 
 // Fetch stores from Supabase near a location
-export const fetchNearbyStoresFromDB = async (lat: number, lng: number, radiusMiles: number = 10, forceRefresh: boolean = false): Promise<StoreData[]> => {
+export const fetchNearbyStoresFromDB = async (lat: number, lng: number, radiusMiles: number = 15, forceRefresh: boolean = false): Promise<StoreData[]> => {
   try {
     // Convert miles to approximate degrees (1 degree ≈ 69 miles)
     const radiusDegrees = radiusMiles / 69
@@ -82,16 +82,19 @@ export const fetchNearbyStoresFromDB = async (lat: number, lng: number, radiusMi
       })
     }
 
-    // Filter for major supermarket chains only (no independent/small chains)
+    // Filter for major supermarket chains only
+    // Focus on main stores, not convenience/express formats for better coverage
     const ALLOWED_CHAINS = [
-      'Tesco', 'Tesco Express', 'Tesco Metro', 'Tesco Extra',
-      'Sainsbury\'s', 'Sainsbury\'s Local',
-      'ASDA', 'ASDA Superstore', 'ASDA Supermarket',
-      'Morrisons', 'Morrisons Daily',
-      'Aldi', 'Lidl',
+      'Tesco', 'Tesco Extra', 'Tesco Superstore',
+      'Sainsbury\'s', 'Sainsburys',
+      'ASDA', 'Asda', 'ASDA Superstore', 'ASDA Supermarket',
+      'Morrisons',
+      'Aldi', 'ALDI',
+      'Lidl', 'LIDL',
       'Iceland', 'Iceland Foods',
       'Marks & Spencer', 'M&S Food', 'M&S Simply Food',
-      'Waitrose', 'Waitrose & Partners', 'Little Waitrose',
+      'Waitrose', 'Waitrose & Partners',
+      'Co-op', 'Co-operative', 'The Co-operative Food',
       'Whole Foods Market'
     ]
 
@@ -126,7 +129,7 @@ export const fetchAndSaveStoresFromOSM = async (lat: number, lng: number): Promi
   try {
     console.log('Fetching stores from OpenStreetMap...')
     
-    const query = buildOverpassQuery(lat, lng, 10000) // 10km radius
+    const query = buildOverpassQuery(lat, lng, 20000) // 20km radius for better coverage
     const response = await fetch('https://overpass-api.de/api/interpreter', {
       method: 'POST',
       headers: {
@@ -351,8 +354,8 @@ const detectChain = (name: string, brand?: string): string => {
   if (chainName.includes('lidl')) return 'Lidl'
   if (chainName.includes('waitrose')) return 'Waitrose'
   if (chainName.includes('iceland')) return 'Iceland'
+  if (chainName.includes('co-op') || chainName.includes('cooperative') || chainName.includes('coop')) return 'Co-op'
   if (chainName.includes('marks & spencer') || chainName.includes('m&s')) return 'M&S'
-  if (chainName.includes('co-op') || chainName.includes('coop')) return 'Co-op'
   if (chainName.includes('spar')) return 'SPAR'
   if (chainName.includes('costco')) return 'Costco'
   
