@@ -13,11 +13,23 @@ test.describe('User Onboarding Flow', () => {
     test.info().annotations.push({ type: 'test-id', description: 'onboarding-001' });
     
     try {
+      // Clear localStorage to simulate new user
+      await page.evaluate(() => {
+        localStorage.removeItem('cartpilot-tutorial-completed');
+        localStorage.removeItem('cartpilot-tutorial-skipped');
+      });
+      
+      // Navigate to page after clearing localStorage
+      await page.reload();
+      
       // Wait for app to load
       await expect(page.locator('h1:has-text("CARTPILOT")')).toBeVisible();
       
-      // Tutorial should appear automatically for new users
-      await expect(page.locator('[data-testid="user-tutorial"]')).toBeVisible({ timeout: 3000 });
+      // Wait for app initialization to complete (Supabase connection, auth check, etc.)
+      await page.waitForTimeout(3000);
+      
+      // Tutorial should appear automatically for new users (wait longer for timeout)
+      await expect(page.locator('[data-testid="user-tutorial"]')).toBeVisible({ timeout: 10000 });
       
       // Verify tutorial content
       await expect(page.locator('text=Welcome to CartPilot!')).toBeVisible();
@@ -33,8 +45,18 @@ test.describe('User Onboarding Flow', () => {
     test.info().annotations.push({ type: 'test-id', description: 'onboarding-002' });
     
     try {
+      // Clear localStorage to simulate new user
+      await page.evaluate(() => {
+        localStorage.removeItem('cartpilot-tutorial-completed');
+        localStorage.removeItem('cartpilot-tutorial-skipped');
+      });
+      await page.reload();
+      
+      // Wait for app initialization to complete
+      await page.waitForTimeout(3000);
+      
       // Wait for tutorial to appear
-      await expect(page.locator('[data-testid="user-tutorial"]')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('[data-testid="user-tutorial"]')).toBeVisible({ timeout: 10000 });
       
       // Navigate through tutorial steps
       const nextButton = page.locator('button:has-text("Next")');
@@ -81,8 +103,11 @@ test.describe('User Onboarding Flow', () => {
     test.info().annotations.push({ type: 'test-id', description: 'onboarding-003' });
     
     try {
+      // Wait for app initialization to complete
+      await page.waitForTimeout(3000);
+      
       // Wait for tutorial
-      await expect(page.locator('[data-testid="user-tutorial"]')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('[data-testid="user-tutorial"]')).toBeVisible({ timeout: 10000 });
       
       // Click skip button
       await page.locator('button:has-text("Skip")').click();
@@ -186,8 +211,11 @@ test.describe('User Onboarding Flow', () => {
     test.info().annotations.push({ type: 'test-id', description: 'onboarding-007' });
     
     try {
+      // Wait for app initialization to complete
+      await page.waitForTimeout(3000);
+      
       // Wait for tutorial
-      await expect(page.locator('[data-testid="user-tutorial"]')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('[data-testid="user-tutorial"]')).toBeVisible({ timeout: 10000 });
       
       // Check for ARIA labels and roles
       const dialog = page.locator('[data-testid="user-tutorial"]');
