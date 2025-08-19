@@ -41,6 +41,7 @@ interface SearchResult {
 // Comprehensive UK grocery product database for fuzzy matching
 const UK_PRODUCTS_DATABASE = [
   // Dairy & Eggs
+  { id: 'milk', name: 'Milk', category: 'Dairy & Eggs', brand: 'Various', keywords: ['milk', 'dairy', 'fresh milk'] },
   { id: 'milk-whole', name: 'Whole Milk', category: 'Dairy & Eggs', brand: 'Various', keywords: ['milk', 'whole milk', '3.25%', 'full milk'] },
   { id: 'milk-semi', name: 'Semi-Skimmed Milk', category: 'Dairy & Eggs', brand: 'Various', keywords: ['milk', 'semi skimmed', '2%', 'semi milk'] },
   { id: 'milk-skimmed', name: 'Skimmed Milk', category: 'Dairy & Eggs', brand: 'Various', keywords: ['milk', 'skimmed', 'fat free', '0%'] },
@@ -116,6 +117,14 @@ const fuzzyMatch = (query: string, target: string): number => {
   
   // Starts with match gets high score
   if (targetLower.startsWith(queryLower)) return 0.9
+  
+  // Check if query matches the start of any word in the target
+  const words = targetLower.split(/\s+/)
+  for (const word of words) {
+    if (word.startsWith(queryLower)) {
+      return 0.85 // High score for word-start matches
+    }
+  }
   
   // Contains match gets medium score
   if (targetLower.includes(queryLower)) return 0.7
