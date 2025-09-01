@@ -64,23 +64,65 @@ export const AIStoreMapper: React.FC<AIStoreMappingProps> = ({
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
-      })
+      // Check if browser supports camera access
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error('Camera API not supported')
+        alert('Camera not supported on this device or browser')
+        return
+      }
+
+      // Try with environment camera first, then fallback to any camera
+      let stream: MediaStream | null = null
+      
+      try {
+        // Try back/environment camera first
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        })
+      } catch (envError) {
+        console.log('Environment camera failed, trying any camera...')
+        // Fallback to any available camera
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        })
+      }
+      
+      if (!stream) {
+        throw new Error('Could not access any camera')
+      }
       
       setCameraStream(stream)
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        // Ensure video plays with proper event handling
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(e => console.log('Video play error:', e))
+        }
       }
       setStep('capture')
-    } catch (error) {
+      console.log('✅ Camera started successfully')
+    } catch (error: any) {
       console.error('Error accessing camera:', error)
-      alert('Camera access denied. Please enable camera access to map the store.')
+      
+      // Provide user-friendly error messages
+      let errorMessage = 'Failed to access camera. '
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage += 'Please allow camera access and try again.'
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage += 'No camera found on this device.'
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage += 'Camera is already in use by another application.'
+      } else {
+        errorMessage += error.message || 'Unknown error occurred.'
+      }
+      
+      alert(errorMessage)
     }
   }
 

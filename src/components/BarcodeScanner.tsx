@@ -33,6 +33,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null)
   const [error, setError] = useState<string>('')
   const [isLookingUp, setIsLookingUp] = useState(false)
+  const [cameraReady, setCameraReady] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
@@ -76,7 +77,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
             description: product.generic_name || product.generic_name_en,
             image: product.image_url,
             barcode: barcode,
-            price: undefined // OpenFoodFacts doesn't have price info
+            price: undefined
           }
           
           // Cache for offline use
@@ -85,429 +86,344 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
         }
       }
 
-      // Fallback to UPC Database API
-      try {
-        const upcResponse = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`)
-        if (upcResponse.ok) {
-          const upcData = await upcResponse.json()
-          if (upcData.items && upcData.items.length > 0) {
-            const item = upcData.items[0]
-            const productInfo = {
-              name: item.title || 'Unknown Product',
-              brand: item.brand,
-              category: item.category,
-              description: item.description,
-              image: item.images?.[0],
-              barcode: barcode,
-              price: undefined
-            }
-            
-            // Cache for offline use
-            await offlineService.cacheProduct(productInfo)
-            return productInfo
-          }
-        }
-      } catch (upcError) {
-        console.log('UPC API failed, using fallback')
-      }
-
-      // Final fallback - return basic info and cache it
+      // Fallback to basic product info
       const fallbackProduct = {
-        name: 'Product Found',
+        name: `Product ${barcode}`,
         barcode: barcode,
-        brand: 'Unknown Brand',
-        category: 'Scanned Product'
+        brand: 'Unknown',
+        category: 'General',
+        description: `Barcode: ${barcode}`
       }
       
       await offlineService.cacheProduct(fallbackProduct)
       return fallbackProduct
+
     } catch (error) {
-      console.error('Product lookup failed:', error)
-      const errorProduct = {
-        name: 'Scanned Product',
+      console.error('Product lookup error:', error)
+      return {
+        name: `Product ${barcode}`,
         barcode: barcode,
-        brand: 'Unknown'
+        brand: 'Unknown',
+        category: 'General'
       }
-      
-      await offlineService.cacheProduct(errorProduct)
-      return errorProduct
     } finally {
       setIsLookingUp(false)
+    }
+  }
+
+  const handleBarcodeDetected = async (barcode: string) => {
+    if (!barcode || scannedCode === barcode) return
+    
+    console.log('🎯 Barcode detected:', barcode)
+    setScannedCode(barcode)
+    
+    // Stop scanning temporarily
+    stopScanning()
+    
+    // Lookup product info
+    const info = await lookupProduct(barcode)
+    setProductInfo(info)
+    
+    // Notify parent component
+    if (onBarcodeScanned) {
+      onBarcodeScanned(barcode, info)
     }
   }
 
   const startCamera = async () => {
     try {
       setError('')
-      setIsScanning(true)
-      scanningRef.current = true
+      setCameraReady(false)
       
       // Check if browser supports camera access
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera not supported on this device')
+        throw new Error('Camera not supported on this device or browser')
       }
+
+      // Simple camera request with better error handling
+      console.log('🎥 Requesting camera access...')
       
-      // Initialize barcode reader with error handling
-      try {
-        codeReaderRef.current = new BrowserMultiFormatReader()
-      } catch (initError) {
-        console.error('Failed to initialize barcode reader:', initError)
-        throw new Error('Barcode scanner initialization failed')
+      const constraints = {
+        video: {
+          facingMode: 'environment', // Use back camera
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
       }
-      
-      // Request camera permission FIRST before listing devices
-      console.log('🎥 Requesting camera permission...')
-      let stream: MediaStream
+
       try {
-        // Always request permission first - this triggers the browser permission prompt
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: { ideal: 'environment' } }, 
-          audio: false 
-        })
+        // Request camera permission
+        const stream = await navigator.mediaDevices.getUserMedia(constraints)
         streamRef.current = stream
-        console.log('✅ Camera permission granted')
         
-        // Now we can safely list devices after permission is granted
-        const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices()
-        console.log(`📱 Found ${videoInputDevices.length} video devices`)
-        
-        // Stop the temporary stream before setting up the scanner
-        stream.getTracks().forEach(track => track.stop())
-        streamRef.current = null
-        
-      } catch (permissionError) {
-        console.error('Camera permission denied:', permissionError)
-        
-        // Provide specific guidance based on error type
-        let permissionMessage = 'Camera permission is required to scan barcodes.'
-        if (permissionError.name === 'NotAllowedError') {
-          permissionMessage = 'Camera access denied. Please click the camera icon in your browser\'s address bar and allow camera access, then try again.'
-        } else if (permissionError.name === 'NotFoundError') {
-          permissionMessage = 'No camera found on this device. Please ensure you have a working camera.'
-        }
-        
-        setError(permissionMessage)
-        setHasPermission(false)
-        setIsScanning(false)
-        return
-      }
-      
-      // Get video devices again after permission is confirmed
-      let videoInputDevices = []
-      try {
-        videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices()
-      } catch (listError) {
-        console.error('Failed to list video devices after permission:', listError)
-        setError('Failed to access camera devices. Please try refreshing the page.')
-        setHasPermission(false)
-        setIsScanning(false)
-        return
-      }
-      
-      const backCamera = videoInputDevices.find(device => 
-        device.label.toLowerCase().includes('back') || 
-        device.label.toLowerCase().includes('rear') ||
-        device.label.toLowerCase().includes('environment')
-      ) || videoInputDevices[videoInputDevices.length - 1] // Default to last camera (usually back)
-      
-      if (videoRef.current) {
-        setHasPermission(true)
-        
-        // Start continuous scanning with Android-specific error handling
-        try {
-          await codeReaderRef.current.decodeFromVideoDevice(
-            backCamera?.deviceId,
-            videoRef.current,
-            (result, error) => {
-              if (result && scanningRef.current) {
-                const barcode = result.getText()
-                console.log('✅ Barcode detected:', barcode)
-                handleBarcodeDetected(barcode)
-                scanningRef.current = false // Stop scanning after first successful scan
-              }
-              if (error && !(error instanceof NotFoundException) && 
-                  !(error instanceof ChecksumException) && 
-                  !(error instanceof FormatException)) {
-                console.warn('Scanning error (non-critical):', error.message || error)
-              }
-            }
-          )
-        } catch (decodeError) {
-          console.error('Failed to start decoder:', decodeError)
-          // Fallback: Try manual stream handling for Android
-          if (streamRef.current && videoRef.current) {
-            videoRef.current.srcObject = streamRef.current
-            setError('Auto-scan unavailable. Please use manual entry or try again.')
-          } else {
-            throw decodeError
+        // Set video source
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          
+          // Wait for video to be ready
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play()
+            setCameraReady(true)
+            setHasPermission(true)
+            console.log('✅ Camera ready')
+            
+            // Start barcode scanning after camera is ready
+            startBarcodeScanning()
           }
         }
+      } catch (permissionError: any) {
+        console.error('Camera error:', permissionError)
+        
+        // Handle specific errors
+        if (permissionError.name === 'NotAllowedError' || permissionError.name === 'PermissionDeniedError') {
+          setError('Camera permission denied. Please allow camera access and try again.')
+        } else if (permissionError.name === 'NotFoundError' || permissionError.name === 'DevicesNotFoundError') {
+          setError('No camera found. Please check your camera connection.')
+        } else if (permissionError.name === 'NotReadableError' || permissionError.name === 'TrackStartError') {
+          setError('Camera is already in use by another application.')
+        } else if (permissionError.name === 'OverconstrainedError' || permissionError.name === 'ConstraintNotSatisfiedError') {
+          // Try with simpler constraints
+          console.log('Trying with basic constraints...')
+          const basicStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+          streamRef.current = basicStream
+          if (videoRef.current) {
+            videoRef.current.srcObject = basicStream
+            videoRef.current.onloadedmetadata = () => {
+              videoRef.current?.play()
+              setCameraReady(true)
+              setHasPermission(true)
+              startBarcodeScanning()
+            }
+          }
+        } else {
+          setError(`Camera error: ${permissionError.message || 'Unknown error'}`)
+        }
+        
+        setHasPermission(false)
+        setCameraReady(false)
       }
-    } catch (err: any) {
-      console.error('Error accessing camera:', err)
-      
-      // Provide specific error messages for common Android issues
-      let errorMessage = 'Camera access denied or not available.'
-      
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        errorMessage = 'Camera permission denied. Please allow camera access in your browser settings.'
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        errorMessage = 'No camera found. Please ensure your device has a camera.'
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        errorMessage = 'Camera is already in use by another app. Please close other camera apps and try again.'
-      } else if (err.message?.includes('secure')) {
-        errorMessage = 'Camera requires HTTPS. Please use the secure version of this app.'
-      } else if (err.message?.includes('initialize')) {
-        errorMessage = 'Barcode scanner failed to start. Please use manual entry or try refreshing the page.'
-      }
-      
-      setError(errorMessage)
+    } catch (error: any) {
+      console.error('Failed to start camera:', error)
+      setError(`Failed to start camera: ${error.message || 'Unknown error'}`)
       setHasPermission(false)
+      setCameraReady(false)
+    }
+  }
+
+  const startBarcodeScanning = async () => {
+    if (!cameraReady || !videoRef.current) {
+      console.log('Camera not ready for scanning')
+      return
+    }
+
+    try {
+      setIsScanning(true)
+      scanningRef.current = true
+      
+      // Initialize barcode reader
+      if (!codeReaderRef.current) {
+        codeReaderRef.current = new BrowserMultiFormatReader()
+      }
+
+      // Start continuous scanning
+      console.log('🔍 Starting barcode scanning...')
+      
+      const videoDevices = await BrowserMultiFormatReader.listVideoInputDevices()
+      const selectedDevice = videoDevices[0] // Use first available device
+      
+      await codeReaderRef.current.decodeFromVideoDevice(
+        selectedDevice?.deviceId,
+        videoRef.current,
+        (result, error) => {
+          if (result && scanningRef.current) {
+            const barcode = result.getText()
+            console.log('✅ Barcode scanned:', barcode)
+            handleBarcodeDetected(barcode)
+          }
+          // Ignore common scanning errors
+          if (error && !(error instanceof NotFoundException) && 
+              !(error instanceof ChecksumException) && 
+              !(error instanceof FormatException)) {
+            console.debug('Scanning error:', error)
+          }
+        }
+      )
+    } catch (error) {
+      console.error('Failed to start barcode scanning:', error)
+      setError('Failed to start barcode scanner. Please try again.')
       setIsScanning(false)
     }
   }
 
-  const stopCamera = () => {
+  const stopScanning = () => {
+    console.log('🛑 Stopping camera...')
     scanningRef.current = false
+    setIsScanning(false)
+    
+    // Stop barcode reader
     if (codeReaderRef.current) {
       codeReaderRef.current.reset()
     }
+    
+    // Stop video stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop())
       streamRef.current = null
     }
-    setIsScanning(false)
-  }
-
-  const handleManualEntry = () => {
-    const barcode = prompt('Enter barcode manually (12-13 digits):')
-    if (barcode && /^\d{12,13}$/.test(barcode)) {
-      handleBarcodeDetected(barcode)
-    } else if (barcode) {
-      setError('Please enter a valid 12 or 13 digit barcode')
-    }
-  }
-
-  const handleBarcodeDetected = async (barcode: string) => {
-    setScannedCode(barcode)
-    stopCamera()
     
-    try {
-      // Look up product information
-      const product = await lookupProduct(barcode)
-      setProductInfo(product)
-      
-      // Notify parent component
-      if (onBarcodeScanned) {
-        onBarcodeScanned(barcode, product)
-      }
-    } catch (error) {
-      console.error('Error processing barcode:', error)
-      setError('Failed to look up product information')
+    // Clear video element
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
     }
+    
+    setCameraReady(false)
   }
 
+  // Start camera when component opens
   useEffect(() => {
     if (isOpen && !isScanning) {
-      // Auto-start camera when opened
       startCamera()
     }
     
     return () => {
-      stopCamera()
+      stopScanning()
     }
   }, [isOpen])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopScanning()
+    }
+  }, [])
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <Card className="max-w-lg w-full bg-white">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>📷 Barcode Scanner</span>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onClose}
-              className="h-8 w-8 p-0"
-            >
-              ✕
-            </Button>
-          </CardTitle>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-auto">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Barcode Scanner</CardTitle>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              stopScanning()
+              onClose?.()
+            }}
+          >
+            ✕
+          </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Camera View */}
+          <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+            <video
+              ref={videoRef}
+              className="w-full h-full object-cover"
+              playsInline
+              autoPlay
+              muted
+            />
+            
+            {/* Scanning overlay */}
+            {isScanning && cameraReady && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="border-2 border-green-500 w-64 h-64 opacity-50">
+                  <div className="border-t-4 border-green-500 w-full animate-pulse"></div>
+                </div>
+              </div>
+            )}
+            
+            {/* Status badges */}
+            <div className="absolute top-2 left-2 flex gap-2">
+              {hasPermission === false && (
+                <Badge variant="destructive">No Camera Access</Badge>
+              )}
+              {isScanning && <Badge variant="default">Scanning...</Badge>}
+              {isLookingUp && <Badge variant="secondary">Looking up product...</Badge>}
+            </div>
+          </div>
+
+          {/* Error message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800 text-sm">{error}</p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="mt-2"
+                onClick={startCamera}
+              >
+                Try Again
+              </Button>
             </div>
           )}
-          
-          {scannedCode ? (
-            <div className="text-center py-6">
-              {isLookingUp ? (
-                <div className="space-y-4">
-                  <div className="text-4xl mb-4">🔍</div>
-                  <h3 className="text-lg font-semibold mb-2">Looking up product...</h3>
-                  <div className="animate-spin mx-auto w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
-                  <Badge className="bg-blue-500 text-white px-4 py-2">
-                    {scannedCode}
-                  </Badge>
-                </div>
-              ) : productInfo ? (
-                <div className="space-y-4">
-                  <div className="text-4xl mb-4">✅</div>
-                  <h3 className="text-xl font-bold text-emerald-600 mb-2">Product Found!</h3>
-                  
-                  {productInfo.image && (
-                    <div className="mx-auto w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
-                      <img 
-                        src={productInfo.image} 
-                        alt={productInfo.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjY0IiB5PSI3MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzlDQTNBRiIgZm9udC1zaXplPSIxNCI+UHJvZHVjdDwvdGV4dD4KPC9zdmc+';
-                        }}
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="text-left space-y-2">
-                    <div>
-                      <h4 className="font-bold text-lg text-gray-800">{productInfo.name}</h4>
-                      {productInfo.brand && (
-                        <p className="text-gray-600">{productInfo.brand}</p>
-                      )}
-                    </div>
-                    
-                    {productInfo.category && (
-                      <div className="flex flex-wrap gap-1">
-                        {productInfo.category.split(',').slice(0, 3).map((cat, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {cat.trim()}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {productInfo.description && (
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {productInfo.description}
-                      </p>
-                    )}
-                    
-                    <div className="pt-2">
-                      <Badge className="bg-emerald-500 text-white">
-                        📊 {scannedCode}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-3 pt-4">
-                    <Button 
-                      onClick={() => {
-                        setScannedCode('')
-                        setProductInfo(null)
-                        setError('')
-                        startCamera()
-                      }}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      🔄 Scan Another
-                    </Button>
-                    <Button 
-                      onClick={onClose}
-                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
-                    >
-                      ✅ Done
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : isScanning ? (
-            <div className="space-y-4">
-              <div className="relative bg-black rounded-lg overflow-hidden">
-                <video
-                  ref={videoRef}
-                  className="w-full h-72 object-cover"
-                  playsInline
-                  muted
-                  autoPlay
-                />
-                {/* Scanning overlay with animated scanner line */}
-                <div className="absolute inset-0 border-2 border-emerald-400/60 m-8 rounded-lg">
-                  <div className="absolute inset-0 bg-emerald-400/10 rounded-lg">
-                    <div className="w-full h-0.5 bg-emerald-400 animate-pulse absolute top-1/2 transform -translate-y-1/2"></div>
-                  </div>
-                </div>
-                
-                {/* Corner indicators */}
-                <div className="absolute top-10 left-10 w-6 h-6 border-l-4 border-t-4 border-emerald-400"></div>
-                <div className="absolute top-10 right-10 w-6 h-6 border-r-4 border-t-4 border-emerald-400"></div>
-                <div className="absolute bottom-10 left-10 w-6 h-6 border-l-4 border-b-4 border-emerald-400"></div>
-                <div className="absolute bottom-10 right-10 w-6 h-6 border-r-4 border-b-4 border-emerald-400"></div>
-                
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-black/70 text-white text-sm px-4 py-2 rounded-full flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                    Scanning automatically...
-                  </div>
-                </div>
+
+          {/* Product info */}
+          {productInfo && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h3 className="font-semibold text-green-900 mb-2">Product Found!</h3>
+              <div className="space-y-1 text-sm">
+                <p><strong>Name:</strong> {productInfo.name}</p>
+                {productInfo.brand && <p><strong>Brand:</strong> {productInfo.brand}</p>}
+                {productInfo.category && <p><strong>Category:</strong> {productInfo.category}</p>}
+                <p><strong>Barcode:</strong> {productInfo.barcode}</p>
               </div>
-              
-              <div className="text-center space-y-3">
-                <p className="text-gray-600 text-sm">
-                  📱 <strong>Position barcode in the viewfinder</strong><br/>
-                  Scanning will happen automatically when detected
-                </p>
-                
-                <div className="flex gap-3">
-                  <Button 
-                    onClick={stopCamera}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    ⏹️ Stop Camera
-                  </Button>
-                  <Button 
-                    onClick={handleManualEntry}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    ⌨️ Manual Entry
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4">📷</div>
-              <h3 className="text-lg font-semibold mb-2">Camera Access</h3>
-              <p className="text-gray-600 mb-6">
-                We need camera access to scan barcodes
-              </p>
-              <div className="space-y-3">
-                <Button 
-                  onClick={startCamera}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
-                >
-                  📷 Start Camera
-                </Button>
-                <Button 
-                  onClick={handleManualEntry}
-                  variant="outline"
-                  className="w-full"
-                >
-                  ⌨️ Enter Barcode Manually
-                </Button>
-              </div>
+              <Button 
+                size="sm" 
+                className="mt-3"
+                onClick={() => {
+                  setProductInfo(null)
+                  setScannedCode('')
+                  startCamera()
+                }}
+              >
+                Scan Another
+              </Button>
             </div>
           )}
+
+          {/* Instructions */}
+          {!error && !productInfo && (
+            <div className="text-center text-sm text-gray-600">
+              <p>Position the barcode within the frame</p>
+              <p>The scanner will automatically detect it</p>
+            </div>
+          )}
+
+          {/* Manual barcode entry */}
+          <div className="border-t pt-4">
+            <p className="text-sm text-gray-600 mb-2">Can't scan? Enter barcode manually:</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Enter barcode number"
+                className="flex-1 px-3 py-2 border rounded-md"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.currentTarget.value) {
+                    handleBarcodeDetected(e.currentTarget.value)
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  const input = e.currentTarget.parentElement?.querySelector('input')
+                  if (input?.value) {
+                    handleBarcodeDetected(input.value)
+                  }
+                }}
+              >
+                Submit
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
   )
 }
+
+export default BarcodeScanner
