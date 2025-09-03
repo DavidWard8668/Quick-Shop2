@@ -15,5 +15,20 @@ export default defineConfig({
   preview: {
     host: '0.0.0.0',
     port: 5173
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks for better caching
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-ui': ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-toast'],
+          'vendor-utils': ['date-fns', 'clsx', 'tailwind-merge'],
+          'supabase': ['@supabase/supabase-js'],
+          'routing': ['react-router-dom']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000 // Increase limit to 1MB
   }
 })
