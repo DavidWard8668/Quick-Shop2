@@ -84,14 +84,14 @@ describe('CartPilot', () => {
     fireEvent.click(screen.getByRole('button', { name: /cart/i }))
     
     await waitFor(() => {
-      expect(screen.getByText(/Shopping List/i)).toBeInTheDocument()
+      expect(screen.getByText(/Smart Shopping List/i)).toBeInTheDocument()
     })
   })
 
   it('shows sign in button when not authenticated', () => {
     render(<CartPilot />)
     
-    expect(screen.getByText('Sign In')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
   it('can add items to shopping cart', async () => {
@@ -100,7 +100,7 @@ describe('CartPilot', () => {
     fireEvent.click(screen.getByRole('button', { name: /cart/i }))
     
     await waitFor(() => {
-      expect(screen.getByText(/Shopping List/i)).toBeInTheDocument()
+      expect(screen.getByText(/Smart Shopping List/i)).toBeInTheDocument()
     })
   })
 })

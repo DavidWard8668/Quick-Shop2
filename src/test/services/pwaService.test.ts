@@ -98,8 +98,16 @@ describe('PWAService', () => {
 
   describe('Service Worker Registration', () => {
     it('should register service worker successfully', async () => {
-      // Service worker registration happens on module import
-      // Just verify it was called at some point
+      // Clear previous calls and create a new service instance to trigger registration
+      mockRegister.mockClear()
+      
+      // Import and create a fresh instance to trigger registration
+      const { PWAService } = await import('../../services/pwaService')
+      const freshService = new (PWAService as any)()
+      
+      // Give the async init time to complete
+      await new Promise(resolve => setTimeout(resolve, 50))
+      
       expect(mockRegister).toHaveBeenCalled()
       const calls = mockRegister.mock.calls
       const hasCorrectCall = calls.some(call => 
@@ -231,9 +239,19 @@ describe('PWAService', () => {
 
   describe('Push Notifications', () => {
     it('should request notification permission', async () => {
+      // Clear the mock and make sure it's properly set up
+      const mockRequestPermission = vi.fn().mockResolvedValue('granted')
+      Object.defineProperty(window, 'Notification', {
+        value: {
+          requestPermission: mockRequestPermission,
+          permission: 'default'
+        },
+        configurable: true
+      })
+      
       const permission = await pwaService.requestNotificationPermission()
       
-      expect(window.Notification.requestPermission).toHaveBeenCalled()
+      expect(mockRequestPermission).toHaveBeenCalled()
       expect(permission).toBe('granted')
     })
 
@@ -252,18 +270,21 @@ describe('PWAService', () => {
         configurable: true
       })
     })
+
+    it('should subscribe to push notifications', async () => {
       // Set registration on service
       const service = pwaService as any
       service.registration = mockServiceWorkerRegistration
       
       // Mock notification permission as granted
-      Object.defineProperty(window.Notification, 'permission', {
-        value: 'granted',
-        writable: true
+      Object.defineProperty(window, 'Notification', {
+        value: {
+          ...window.Notification,
+          permission: 'granted'
+        },
+        configurable: true
       })
       
-
-    it('should subscribe to push notifications', async () => {
       // Mock existing subscription to null (so new subscription is created)
       mockServiceWorkerRegistration.pushManager.getSubscription.mockResolvedValue(null)
       
@@ -278,10 +299,6 @@ describe('PWAService', () => {
       
       expect(mockServiceWorkerRegistration.pushManager.subscribe).toHaveBeenCalled()
       expect(subscription).toBeTruthy()
-      
-      // Set registration on service
-      const service = pwaService as any
-      service.registration = mockServiceWorkerRegistration
       
       // Mock notification permission as granted
       Object.defineProperty(window.Notification, 'permission', {
@@ -304,6 +321,13 @@ describe('PWAService', () => {
     })
 
     it('should handle push subscription failure', async () => {
+      // Set up console spy first
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      
+      // Set registration on service
+      const service = pwaService as any
+      service.registration = mockServiceWorkerRegistration
+      
       // Mock subscription failure
       mockServiceWorkerRegistration.pushManager.getSubscription.mockResolvedValue(null)
       mockServiceWorkerRegistration.pushManager.subscribe = vi.fn().mockRejectedValue(new Error('Subscription failed'))
@@ -314,8 +338,6 @@ describe('PWAService', () => {
         value: { ...originalEnv3, VITE_VAPID_PUBLIC_KEY: 'test-vapid-key' },
         writable: true
       })
-      
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       
       const subscription = await pwaService.subscribeToPushNotifications()
       
